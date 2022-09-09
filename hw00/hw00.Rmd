@@ -1,0 +1,195 @@
+
+---
+title: "STAT340 HW0: R Review"
+author: "Keith Levin"
+date: "September 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ Thursday, September 15 2022 at 11:59pm
+
+---
+
+This homework is designed to give you a quick review of some of the basics of R that you learned in STAT240.
+
+## Problem 1: Plotting review
+
+Let's quickly recap some of the basic plotting and data exploration tools available in R.
+You are free to use either the built-in R plotting tools or `ggplot2` for these problems; whichever you are more comfortable with.
+
+### 1(a): creating a histogram
+
+The following block of code generates 200 standard normal random variables and stores them in a vector called `normals`.
+Use either the built-in R plotting tools or `ggplot2` to create a histogram of these points.
+Title your plot "Histogram of normals".
+There is no need to save this plot in an image file; simply display it in-line in the R markdown file.
+
+```{R}
+normals <- rnorm( 200 ); # Generate 200 standard normals. See ?rnorm for details
+
+# TODO: plotting code goes here.
+```
+
+### 1(b): creating a scatter plot
+
+Download the file `nile.csv` from the course webpage ([available here](https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2022/STAT340/hw/hw00/nile.csv)
+)) or from Canvas.
+This comma-separated value (CSV) file contains data describing the annual flow of the Nile river from 1871 to 1970 (adapted from a built-in data set in R; see `?Nile`).
+The file has two columns, titled `Year` and `Flow`.
+Each row corresponds to a year, with the first column giving the year and the second column given the flow for that year in $10^8$ cubic meters (10 million cubic meters).
+
+Read the file into a dataframe (you may use either the R built-in functions like `read.csv` or use tidyverse tools).
+
+```{R}
+
+#TODO: code to load the CSV file goes here.
+
+```
+
+Create a scatter-plot showing the year on the x-axis and the flow (in 10 million cubic meters) on the y-axis.
+Give your plot a sensible title and be sure to label the x- and y-axes.
+There is no need to save this plot in a figure; simply display it in-line in the R markdown file.
+
+```{r}
+
+# TODO: plotting code goes here.
+
+```
+
+Do you see any trends in the data over time or anything else interesting?
+There are no strictly right or wrong answers-- just say enough to prove that you looked at the plot!
+
+***
+
+TODO: brief answer here.
+
+***
+
+## Problem 2: Defining simple functions in R.
+
+This is not a programming course, but you do need a certain amount of programming to do data science.
+Toward that end, let's refresh our memory regarding function definition in R.
+
+### 2(a): repeater
+
+Write a function `print_twice` that takes a single argument `x` and prints that argument twice, once per line.
+You may assume that the argument `x` is an object that can sensibly be printed (i.e., we are not going to do anything tricky like trying to call `print_twice` on something that's going to cause a weird error).
+
+__Reminder:__ to print something in R, use the `cat()` function. *Do not* use `print()` to print in R (I know, it's confusing!).
+
+```{R}
+print_twice <- function( x ) {
+  # TODO: code goes here.
+}
+
+```
+
+### 2(b): repeater, repeated
+
+Let's generalize our `print_twice` function.
+Define a function `repeat_n` that takes two arguments, `x` and `n`, where `x` is arbitrary (but again, something that can be printed using `cat(x)`) and `n` is a non-negative integer.
+`repeat_n(x,n)` should print `x` `n` times, once per line.
+
+__Reminder:__ use `cat(x)` to print `x`.
+
+__Note:__ think carefully about what should happen when `n` is zero!
+
+__Hint:__ use a for-loop or while-loop. See, e.g., (https://r4ds.had.co.nz/iteration.html)[here].
+
+You may assume that `x` is printable (i.e., `cat(x)` will not cause an error) and that `n` is a non-negative integer.
+
+```{r}
+repeat_n <- function( x, n ) {
+  #TODO: code goes here.
+}
+```
+
+### 2(c): enumerating the triangular numbers
+
+For $n=0,1,2,\dots$, the $n$-th [triangular number](https://en.wikipedia.org/wiki/Triangular_number) is given by
+$$
+T_n = n(n+1)/2.
+$$
+Define a function `triangular` that takes a single argument `n` and returns the `n`-th triangular number.
+You may assume that `n` is a non-negative integer.
+
+```{r}
+triangular <- function( n ) {
+  # TODO: code goes here.
+}
+```
+
+### 2(d): summarizing data
+
+Define a function `my_summary` that takes a vector `x` as its only argument and returns a length-4 vector as its output whose
+
+* first entry is the mean of `x`,
+* second entry is the standard deviation of `x` (using either $n$ or $n-1$ in the denominator; your choice)
+* third entry is the minimum entry of `x`
+* fourth entry is the maximum entry of `x`.
+
+```{r}
+# TODO: function definition goes here.
+```
+
+## Problem 3: loading and exploring data
+
+Download the CSV file `SFO-2018.csv` from Canvas or
+[from the course webpage](https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2022/STAT340/hw/hw00/SFO-2018.csv).
+This file should be at least vaguely familiar to you from STAT240-- [see here](https://bookdown.org/bret_larget/stat-240-case-studies/airport-waiting-times.html) for a refresher.
+It describes data concerning waiting times at Customs and Border Patrol (CBP) at San Francisco International airport (SFO) in 2018.
+Read the summary at the link for a refresher.
+
+### 3(a): loading the data
+
+Read the CSV file into a data frame called `sfo`.
+You may use either the built-in R functions for reading files or use tidyverse tools.
+
+How many data points are in the file (i.e., how many rows in the data frame)?
+
+```{r}
+# TODO: code goes here.
+```
+
+How many different Terminals are attested in the data (i.e., how many distinct values are in the `Terminal` column)?
+
+```{r}
+#TODO: code goes here.
+```
+
+### 3(b): how many flights?
+
+How many international flights were handled at SFO in total (i.e., over all the terminals combined) on April 1st, 2018?
+
+You may use either tidyverse tools or built-in R functions to answer this question.
+
+```{r}
+#TODO: code goes here.
+```
+
+### 3(c): how bad could it be?
+
+What was the longest average wait time experienced by US citizens in the data set (i.e., the largest value in the `U.S._Citizen_Average_Wait_Time` column), and when did it occur (day and hour)?
+
+```{r}
+# TODO: code goes here.
+```
+
+What about for the longest average wait time experienced by non-US citizens (the `Non_U.S._Citizen_Average_Wait_Time` column)?
+
+```{r}
+# TODO: code goes here.
+```
+
