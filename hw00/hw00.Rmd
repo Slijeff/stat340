@@ -11,6 +11,10 @@ output: html_document
 TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
 
 ***
+``` {R setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+```
 
 ## Instructions
 
@@ -40,6 +44,10 @@ There is no need to save this plot in an image file; simply display it in-line i
 normals <- rnorm( 200 ); # Generate 200 standard normals. See ?rnorm for details
 
 # TODO: plotting code goes here.
+ggplot() +
+  aes(normals) +
+  geom_histogram() + 
+  ggtitle("Histogram of Normals")
 ```
 
 ### 1(b): creating a scatter plot
@@ -53,9 +61,8 @@ Each row corresponds to a year, with the first column giving the year and the se
 Read the file into a dataframe (you may use either the R built-in functions like `read.csv` or use tidyverse tools).
 
 ```{R}
-
-#TODO: code to load the CSV file goes here.
-
+nile = read_csv("nile.csv")
+head(nile)
 ```
 
 Create a scatter-plot showing the year on the x-axis and the flow (in 10 million cubic meters) on the y-axis.
@@ -65,7 +72,10 @@ There is no need to save this plot in a figure; simply display it in-line in the
 ```{r}
 
 # TODO: plotting code goes here.
-
+ggplot(nile, aes(x = Year, y = Flow)) + 
+  geom_point() + 
+  ggtitle("Flow vs Year") +
+  ylab("Flow (10 million cubic meters)")
 ```
 
 Do you see any trends in the data over time or anything else interesting?
@@ -73,7 +83,7 @@ There are no strictly right or wrong answers-- just say enough to prove that you
 
 ***
 
-TODO: brief answer here.
+The graph follows a trend that as the year increases, the flow decreases.
 
 ***
 
@@ -92,8 +102,9 @@ __Reminder:__ to print something in R, use the `cat()` function. *Do not* use `p
 ```{R}
 print_twice <- function( x ) {
   # TODO: code goes here.
+  cat(x, "\n")
+  cat(x, "\n")
 }
-
 ```
 
 ### 2(b): repeater, repeated
@@ -113,6 +124,11 @@ You may assume that `x` is printable (i.e., `cat(x)` will not cause an error) an
 ```{r}
 repeat_n <- function( x, n ) {
   #TODO: code goes here.
+  if (n != 0) {
+    for (i in 1:n) {
+      cat(x, "\n")
+    }
+  }
 }
 ```
 
@@ -128,6 +144,7 @@ You may assume that `n` is a non-negative integer.
 ```{r}
 triangular <- function( n ) {
   # TODO: code goes here.
+  return(n * (n + 1) / 2)
 }
 ```
 
@@ -142,6 +159,13 @@ Define a function `my_summary` that takes a vector `x` as its only argument and 
 
 ```{r}
 # TODO: function definition goes here.
+my_summary = function(x) {
+  mu = mean(x)
+  stdd = sd(x)
+  mini = min(x)
+  maxi = max(x)
+  return(c(mu, stdd, mini, maxi))
+}
 ```
 
 ## Problem 3: loading and exploring data
@@ -161,13 +185,20 @@ How many data points are in the file (i.e., how many rows in the data frame)?
 
 ```{r}
 # TODO: code goes here.
+sfo = read_csv("SFO-2018.csv")
+nrow(sfo)
 ```
 
 How many different Terminals are attested in the data (i.e., how many distinct values are in the `Terminal` column)?
 
 ```{r}
 #TODO: code goes here.
+sfo %>% 
+  group_by(Terminal) %>% 
+  summarize()
 ```
+
+There are two terminals.
 
 ### 3(b): how many flights?
 
@@ -177,6 +208,10 @@ You may use either tidyverse tools or built-in R functions to answer this questi
 
 ```{r}
 #TODO: code goes here.
+april_1st = sfo %>% 
+  filter(Date == "4/1/2018")
+
+sum(april_1st$Flights)
 ```
 
 ### 3(c): how bad could it be?
@@ -185,11 +220,19 @@ What was the longest average wait time experienced by US citizens in the data se
 
 ```{r}
 # TODO: code goes here.
+sfo %>% 
+  select(Date, Hour, US_Citizen_Average_Wait_Time) %>% 
+  arrange(desc(US_Citizen_Average_Wait_Time)) %>% 
+  head(1)
 ```
 
 What about for the longest average wait time experienced by non-US citizens (the `Non_U.S._Citizen_Average_Wait_Time` column)?
 
 ```{r}
 # TODO: code goes here.
+sfo %>% 
+  select(Date, Hour, Non_US_Citizen_Average_Wait_Time) %>% 
+  arrange(desc(Non_US_Citizen_Average_Wait_Time)) %>% 
+  head(1)
 ```
 
