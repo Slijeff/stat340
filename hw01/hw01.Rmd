@@ -1,0 +1,247 @@
+
+---
+title: "STAT340 HW1: Random Variables"
+author: "Jeffrey Hui"
+date: "September 17, 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ September 22, 2022 at 11:59pm.
+
+---
+
+## Problem 1: Generating random variables
+
+Let's use R to generate Binomial, Geometric, and Poisson random variables.
+
+### 1a)
+
+Read the help files for these functions. What are the 8 headings in each of the help files? 
+
+Reading the help files is hard at first, but it is an essential skill.  Have a look at the help files for these functions.  What are the 8 headings (a "heading" is the title of a section-- these show up in R documentation in larger, bold text)?
+```{r}
+# Reminder: the r at the start of these function names stands for Random
+# ?rbinom
+# ?rgeom
+# ?rpois
+```
+
+***
+
+The 8 headings are Description, Usage, Arguments, Details, Value, Source, See Also, and Examples.
+
+***
+
+### 1b)
+
+Having read the documentation, now let's use these functions to generate a single copy of each of these three random variables.
+Once again, you may set the model parameters however you like.
+
+```{r}
+
+# generate a single Binomial random variable:
+rbinom(n = 1, size = 10, prob = .3)
+
+# generate a single Geometric random variable:
+rgeom(n = 1, prob = .3)
+
+# generate a single Poisson random variable:
+#TODO: code goes here.
+rpois(n = 1, lambda = 3)
+```
+
+
+### 1c)
+
+Now, let's generate ten copies of each random variable.
+You may continue to set the model parameters however you like.
+
+```{r}
+# generate 10 Binomial random variables:
+
+# Reminder: the Binomial is a bit confusing-- there is a size parameter,
+# which corresponds to the parameter we usually denote n,
+# and this n is not the same n as the n argument to rbinom.
+# Confusing, I know. You'll have to take it up with the R development team.
+
+rbinom(n = 10, size = 5, prob = .3)
+
+# generate 10 Geometric random variables:
+rgeom(n=10, p=0.25)
+
+# generate 10 Poisson random variables:
+#TODO: code goes here.
+rpois(n = 10, lambda = 3)
+
+```
+
+---
+
+## Problem 2: Making histograms
+
+One way to think about random variables is through the shape of their distributions
+
+### 2a) visualizing distributions with histograms
+
+To see what the distributions of different random variables look like, generate 1,000 copies of some random variables (indicated in the code below) and put them in a histogram:
+
+```{r}
+# Exponential:
+hist(rexp(n=1000, rate=1/5))
+# Alternative choice, using magrittr:
+#library(magrittr)
+#rexp(10000, rate=1/5) %>% hist
+
+# Binomial:
+hist(rbinom(n = 1000, size = 10, prob = 0.5))
+
+# Normal:
+hist(rnorm(n = 1000, mean = 0, sd = 1))
+
+```
+
+Repeat the last step, but change the value of the parameter that you put in.  
+
+```{r}
+
+# Exponential:
+hist(rexp(n = 1000, rate = 1))
+# alternative solution using magrittr:
+#library(magrittr)
+#rexp(1000, rate=1) %>% hist
+
+# Binomial: (change p, not the size parameter)
+hist(rbinom(n = 1000, size = 10, prob = 0.3))
+
+# Binomial: (change the size parameter, not p)
+hist(rbinom(n = 1000, size = 80, prob = 0.5))
+
+# Normal: (change the mean, not the standard deviation)
+hist(rnorm(n = 1000, mean = -1, sd = 1))
+
+# Normal: (change the standard deviation, not the mean)
+hist(rnorm(n = 1000, mean = 0, sd = 2))
+
+```
+
+### 2b) Changing the distribution
+
+What happens to the histogram in Problem 2 above when the parameter gets bigger or smaller?  
+
+Answer in words:
+
+1) Exponential: the histogram "expands out to the right" as the rate decreases.
+2) Binomial (changing p): the center of the hill shifts left or right.
+3) Binomial (changing n): the shape shifts left or right and the spread is larger.
+4) Normal (changing mu): the entire graph shifts left or right.
+5) Normal (changing sigma): the histogram expands to left and right as the sigma increases.
+
+---
+
+## Problem 3: Evaluating probability mass/density functions
+
+Now let's answer the same question, but this time using the built-in R functions for evaluating probability distributions.
+That is, instead of generating random variables to approximate the true distribution, let's evaluate the probability mass or density exactly.
+
+```{r}
+# Exponential, for values k=0,1,2,...,20:
+# 
+k <- seq(0,20);
+plot( k, dexp(k,rate=1) )
+
+# Binomial(n=10,p=0.3), for values k=0,1,2,...,9,10:
+k = seq(0, 10)
+plot( k, dbinom(k, size = 10, prob = 0.3))
+
+# Normal(mean=0,sd=1), for x in [-3,3] in increments of size 0.1
+x <- seq(-3,3,0.1);
+# Note that this is a density, not a mass function,
+# but for plotting purposes, we can't evaluate the pdf at
+# EVERY point, so we'll just choose a few, encoded in x.
+plot( x, dnorm(x,mean=0,sd=1))
+
+# Normal(mean=1,sd=2), for x in [-5,7] in increments of size 0.1
+x = seq(-5, 7, 0.1)
+plot(x, dnorm(x, mean = 1, sd = 2))
+```
+
+---
+
+## Problem 4: sums of RVs.
+
+Let's close by getting some practice with combining random variables to create new RVs.
+
+### 4a)
+
+Define a function `sum_of_normals` that takes a single argument `n` (you may assume that n is a non-negative integer), generates `n` independent normals with mean 0 and variance 1, and returns their sum.
+__Hint:__ pay attention to the case n=0. What should be the sum of zero normals?
+```{r}
+sum_of_normals <- function( n ){
+  #TODO: CODE GOES HERE.
+  if (n > 0) {
+    return (sum(rnorm(n = n, mean = 0, sd = 1)))
+  }
+  return (0)
+}
+```
+
+### 4b)
+
+Define a function `sum_of_poissons` that takes two arguments: a non-negative integer `n` and a positive real `lambda`.
+Your function should generate `n` independent Poisson random variables with shared parameter `lambda`, and return their sum.
+There is no need to perform error checking in this function: You may assume that `n` is a non-negative integer and lambda is a positive real (i.e., numeric) `n` and lambda should both default to 1, so that `sum_of_poissons(5)` returns the sum of five `Pois(1)` random variables.
+```{r}
+sum_of_poissons <- function( n = 1, lambda = 1 ) { # TODO: fill in arguments!
+  # TODO: CODE GOES HERE!
+  return (sum(rpos(n = n, lambda = lambda)))
+}
+```
+
+### 4c)
+
+Define a function `max_of_normals` that takes three arguments:
+
+* a non-negative integer `n`
+* a real number (i.e., numeric) `mu`
+* a positive real (i.e., positive numeric) `sigma`
+
+Your function should generate `n` independent normals with mean and standard deviation given by `mu` and `sigma`, respectively, and return the maximum of those `n` normal RVs.
+`mu` should default to 0 and `sigma` should default to 1. There should be no default value for `n`.
+There is no need to perform any error checking in your function.
+That is, you may assume that the user (e.g., the grader) will not call your function with a negative value for `sigma` or a float for `n`, etc.
+
+__Hint:__ be careful of the case $n=0$. By convention, the maximum of an empty set (e.g., the maximum of a collection of zero normals) is negative infinity.
+
+```{r}
+max_of_normals <- function(n, mu = 0, sigma = 1) {
+  if (n > 0) {
+    return (max(rnorm(n = n, mean = mu, sd = sigma)))
+  }
+  return (-Inf)
+}
+```
+
+## Problem 5: choosing a model
+
+Sandy is a data scientist working for an online store, and is currently is trying to model the number of customers who use the site on a given day.
+Sandy decides to model this number as being drawn according to a normal distribution.
+Do you agree with Sandy's decision? Why or why not? What other modeling choices might Sandy consider, and why?
+
+__Note:__ there are no strictly right or wrong answers to this question. Simply explain your reasoning clearly in a few sentences.
+
+***
+I disagree with Sandy's decision. Fist, the normal distribution is a discrete random variable, which is typically not suitable when describing the number of customers. Secondly, the normal distribution might be negative, which is also not good for modeling count. Another modeling choice that Sandy might consider is the Poisson distribution. It's distribution is strictly greater than 0 and it is discrete. It also has a lambda parameter that controls the rate of customers at her store.
+
+***
