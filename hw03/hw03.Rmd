@@ -152,7 +152,7 @@ Once again, clearly explain your reasoning to get full credit.
 
 ***
 
-TODO: explanation goes here.
+I simulated the scenario as the following. First, I made sure that the NFC teams gets 29 wins by producing an array that has 29 ones, and concatenate the array with 27 zeros to make sure the total number of game is 56. Then in each iteration, I shuffled the array and count the longest consecutive ones (wins) that appeared in the shuffled array. For example, if there are a total of 10 games and 5 wins, the shuffled array might be [0, 0, 1, 1, 1, 0, 1, 0, 0, 1]. In this case, the maximum consecutive wins will be 3. Finally, I count how many consecutive wins that are greater or equal to 13 and divide it by the total number of iterations, which gives me the probability that the NFC teams win 13 games or above among the 29 wins out of a total of 56 games.
 
 ***
 
