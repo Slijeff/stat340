@@ -1,0 +1,196 @@
+
+---
+title: "STAT340 HW03: Testing I"
+author: "Jeffrey Hui"
+date: "October 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ October 6, 2022 at 11:59pm.
+
+---
+
+## 1) Permutation testing
+
+Below are data arising from a (fictionalized) data source: the number of defects per day on an assembly line before (`before`) and after (`after`) installation of a new torque converter (this is a totally fictional "part" of an assembly line-- just treat these as "control" and "treatment" groups, respectively).
+
+```{r}
+before <- c(2, 3, 8, 3, 4, 5, 6, 3, 5, 5, 2, 4, 3, 5, 4, 1, 3, 5, 8, 4, 4, 2, 2, 4, 6, 3, 4, 3, 4, 6, 5, 4, 5, 4, 6, 6, 3, 7, 0, 6);
+after <- c(1, 4, 2, 3, 6, 2, 5, 7, 3, 5, 3, 2, 6, 5, 3, 2, 6, 4, 4, 3, 4, 5, 2, 7, 2, 2, 8, 2, 7, 5 );
+```
+
+a) Use a permutation test to assess the claim that installation of the new part changed the prevalence of defects.
+That is, test the null hypothesis that the distribution of defects is the same before and after installation of the new part.
+
+__Hint:__ be careful of the fact that these two different groups have different sizes!
+
+__Note:__ You do not *have* to produce a p-value, here, though that would be a very reasonable thing to do!
+
+```{r}
+
+mean_diff <- mean(after) - mean(before)
+permute_and_compute <- function (before_data, after_data) {
+  pooled_data <- c(before_data, after_data)
+
+  n_before <- length(before_data)
+  n_after <- length(after_data)
+  n_total <- n_before + n_after
+
+  shuffled_data <- sample(pooled_data, size = n_total, replace = FALSE)
+  shuffled_before <- shuffled_data[1:n_before]
+  shuffled_after <- shuffled_data[(n_before + 1):n_total]
+
+  return (mean(shuffled_after) - mean(shuffled_before))
+}
+
+NMC <- 1e4
+test_statistics <- rep(0, NMC)
+for (i in 1:NMC) {
+  test_statistics[i] <- permute_and_compute(before_data = before, after_data = after)
+}
+
+hist(test_statistics)
+abline(v = mean_diff, col='red')
+sum(test_statistics >= mean_diff) / NMC
+```
+
+b) Explain, briefly, what you did above and why. Imagine that you are trying to explain to someone who isn't your statistics professor what exactly you are doing in a permutation test. Explain your conclusion based on your test above.
+Three to five sentences should be plenty, but you are free to write as much or as little as you think is necessary to clearly explain your findings.
+
+***
+
+First, I choose the mean as the test statistic and I calculated the mean between the before and after data. Then I combine the data together and shuffle it. Next, I assigned the shuffled array to new before and after data with the length identical to the original data, and I calculated the mean between them then return it. Using a loop, I repeated this process 10000 times and calculate the percentage of my simulated result is greater or equal to my original test statistic, which is the p-value. Based on my test, there is evidence against the null hypothesis that the before and after had the same distribution.
+
+***
+
+## 2) Extrasensory perception?
+
+There has been a great deal of effort over the years to prove the existence or non-existence of [extra-sensory perception (ESP)](https://en.wikipedia.org/wiki/Extrasensory_perception).
+
+Sam claims to have ESP, and offers to demonstrate it via the following experiment: we will start with a standard deck of playing cards.
+We will shuffle the deck and look at the cards, one at a time, in order, not showing Sam the card.
+As we look at each card, Sam will guess the card (both the rank and the suit), and we will record whether or not Sam has guessed correctly.
+We *will not* tell Sam if the guess was correct, simply record whether or not it was correct without giving feedback.
+
+__Note:__ A standard deck of playing cards consists of 52 cards, 4 suits, 13 ranks; each card has a suit and a rank, with each rank-suit combination appearing exactly once. Note that as a result, each of the 52 cards in the deck is unique. See [here](https://en.wikipedia.org/wiki/Standard_52-card_deck) for additional background and information.
+
+Suppose that we conduct this experiment and we find that Sam correctly guesses four (4) of the 52 cards correctly.
+Use the techniques and ideas introduced so far this semester to assess how likely or unlikely this outcome (or the outcome in which Sam gets even more cards correct) is under the null hypothesis that Sam guesses each of the 52 cards exactly once each, in a random order.
+That is, we are assuming that Sam is guessing by randomly choosing an ordering of the cards in the deck and guessing in that order.
+
+In addition to code, please include a detailed explanation of your thought process, including motivating and/or clarifying your modeling choices.
+Think carefully about how to model a randomly shuffled deck of cards-- thinking back to our birthday example from last week might prove helpful.
+
+Your response will be graded both on its correctness (though note that there is no single strictly correct answer, here) and on the clarity of your explanation.
+Try writing as though you were explaining your choices to a student who has already taken this course previously.
+
+***
+
+To access how likely that Sam correctly guesses 4 of the 52 cards, first I randomly generated 52 numbers in range [1:52] to model the cards. Then I randomly generated 52 numbers to simulate Sam's guesses. If the guesses match the shuffled deck in more than 4 numbers, then I put a 1 in the guess_correct array. Otherwise, it is 0 in the array at the ith iteration/position. Finally, I sum up the guess_correct array, which will tell me how many guesses out of all guesses did Sam guessed 4 cards correctly. Then divide that sum by the total number of iterations will give me the probability that same correctly guesses 4 cards correctly.
+
+```{r}
+NMC <- 1e4
+guess_correct <- rep(0, NMC)
+for (i in 1:NMC) {
+  shuffled_deck <- sample(52, 52, replace = FALSE)
+  guesses <- sample(52, 52, replace = FALSE)
+  guess_correct[i] <- (sum(shuffled_deck == guesses) >= 4)
+}
+sum(guess_correct) / NMC
+```
+
+Feel free to add more code blocks and/or more text blocks as needed.
+
+***
+
+## 3) Just lucky?
+
+The [National Football League (NFL)](https://en.wikipedia.org/wiki/National_Football_League) is the top league in American football.
+The league consists of two conferences, the American Football Conference (AFC) and the National Football Conference (NFC).
+Since 1967, the top team from each of these conferences play against one another in the [Superbowl](https://en.wikipedia.org/wiki/Super_Bowl).
+
+a) As of writing this homework, there have been fifty six (56) Superbowls played.
+The NFC team has won 29 of these 56 games.
+Using everything you have learned so far this semester, assess whether or not this constitutes a "surprising" amount of games.
+Please include a clear explanation of your thought process and how you arrived at your conclusion.
+As is often the case in these homeworks, there is no strictly right or wrong answer, here, so long as your reasoning is sound and your explanation is clearly written. 
+
+***
+
+To check whether 29 wins out of 56 games is "surprising", I randomly sample from [0, 1] 56 times with replacement. In this case, 0 represents a loose whereas a 1 represents a win. Then I sum up all the games, which will tell me how many games out of 56 games the team has won, in simulation. Finally, I sum up the number of times the team has won at least 29 games and divide it by the total number of simulations. This will result in a probability that the team has won at least 29 games out of 56 games.
+
+***
+
+```{r}
+NMC <- 25000
+num_wins <- rep(0, NMC)
+for (i in 1:NMC) {
+  results <- sample(c(0,1), 56, replace = TRUE)
+  num_wins[i] <- sum(results)
+}
+hist(num_wins)
+abline(v = 29, col='red')
+sum(num_wins >= 29) / NMC
+```
+
+b) Among those 29 wins by NFC teams, the NFC team won the Superbowl every year from 1985 to 1997 (13 consecutive Superbowls; coincidentally, the last of these was a victory by Wisconsin's own Green Bay Packers over my hometown team the New England Patriots).
+Under the assumption that each year's Superbowl is independent of the others and that the AFC and NFC teams are equally likely to win any given Superbowl, assess how surprising this result is.
+That is, associate a p-value to the event that the NFC team won all 13 Superbowls in the span 1985 to 1997.
+Once again, clearly explain your reasoning to get full credit.
+
+***
+
+TODO: explanation goes here.
+
+***
+
+```{r}
+NMC <- 25000
+wins <- rep(1, 29) # 29 wins in total
+total_games <- c(wins, rep(0, 56 - 29))
+num_consecutive_wins <- rep(0, NMC)
+for (i in 1:NMC) {
+  samples <- sample(total_games, 56, replace = FALSE)
+  r <- rle(samples)
+  consec_wins <- max(r$lengths[r$values == 1]) # count all consecutive ones and take the max
+  num_consecutive_wins[i] <- consec_wins
+}
+hist(num_consecutive_wins)
+abline(v = 13, col='red')
+sum(num_consecutive_wins >= 13) / NMC
+```
+
+c) __Bonus:__ (not worth any points; just a fun exercise) Now, let's zoom out. Write a simulation to estimate how often, under our "independent coinflips" model of the Superbowl, it happens that either of the two conferences (AFC or NFC) wins at least 13 consecutive games.
+__Hint:__ you may find the following function useful, which takes a vector of `0`s and `1`s (e.g., a sequence of Bernoulli RVs) and outputs the length of the longest run.
+
+```{r}
+longestRun <- function(x){
+    return( max( 0, with(rle(x), lengths) ) )
+}
+
+# Example: here's a vector encoding the Superbowl history.
+# 0s are AFC, 1s are NFC.
+superbowls <- c( 1,1,0,0,0,1,0,0,0,0,0,1,0,0,0,
+                 1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,
+                 1,0,0,1,0,0,1,0,0,0,0,1,0,1,1,
+                 1,0,1,0,0,0,1,0,0,1,1)
+longestRun(superbowls)
+```
+
+
+```{r}
+# TODO: code goes here,
+# if you choose to do this OPTIONAL, NOT WORTH ANY POINTS bonus problem
+```
