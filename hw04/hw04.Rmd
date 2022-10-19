@@ -1,0 +1,182 @@
+
+---
+title: "STAT340 HW04: Testing II"
+author: "Jeffrey Hui"
+date: "October 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ October 13, 2022 at 11:59pm.
+
+---
+
+## 1) Constructing a Rejection Region
+
+This problem will give you some practice thinking about hypothesis testing and choosing rejection thresholds.
+Let's suppose we're running a statistical test with a test statistic $T$.
+
+a) Suppose that under our null hypothesis, $T$ has an exponential distribution with rate parameter $\lambda = 1$, in which larger values of $T$ correspond to more "unusual" data.
+Use R to compute the rejection threshold such that our test has level $\alpha = 0.05$.
+
+```{r}
+qexp(0.95, rate = 1)
+```
+
+b) Suppose that we are continuing to use the same test statistic $T$ above, so that $T$ is distributed as a rate-$1$ exponential and larger values of $T$ correspond to more "unusual" observations, but now we want to conduct our test at level $\alpha=0.01$.
+Use R to compute a rejection threshold for this test.
+How does this rejection threshold compare with the one computed in part (a)?
+Does this surprise you? Why or why not?
+ 
+```{r}
+qexp(0.99, rate = 1)
+```
+
+***
+
+The rejection threshold is larger compare with the one computed in part A. This is expected because larger values of T corresponds to more "unusual" observations, and since $\alpha=0.01$ is more "unusual" than $\alpha=0.05$, the threshold is larger for the second problem.
+
+***
+
+c) Suppose now that we use a different test statistic $T'$, which has a central $t$-distribution with $12$ degrees of freedom under the null hypothesis, in which larger values of $T'$ correspond to more "unusual" outcomes.
+Use R to determine a rejection threshold for this test statistic so that our test has level $\alpha=0.05$.
+__Hint:__ see `?qt` for information on quantiles of the t-distribution. A central t-distribution is obtained by setting the `ncp` parameter equal to zero (this is the default behavior, so you can just leave this parameter unspecified). The degrees of freedom are controlled by the `df` parameter.
+
+```{r}
+qt(0.95, 12, ncp = 0)
+```
+
+
+## 2) Short answers: p-values and testing
+
+Answer each of the following short-answer prompts.
+Two or three sentences for each is plenty.
+
+a) A common misconception by beginner statisticians is that a p-value represents the probability that the null hypothesis is true. Explain briefly why this understanding is incorrect.
+Specifically, how is the correct definition of a p-value as discussed in your readings and in lecture, different from this incorrect understanding?
+
+***
+
+The definition of p-value is $\Pr[T(D_0)\ge T(d); H_0]$, which means the probability of the test statistic of data generated under $H_0$ is "more unusual" than the test statistic of the actual observed data, under the null hypothesis. It is far from the probability that the null hypothesis is true.
+
+***
+
+b) Alice and Bob are both conducting a one-sided test of the same null hypothesis $H_0$, using a test statistic $T$, in which larger values of $T$ correspond to more unusual or extreme observations.
+That is, Alice and Bob both will reject $H_0$ for suitably large values of $T$.
+However, Alice and Bob specify different levels for their tests.
+Alice and Bob both see $T$ computed on the same data.
+Alice rejects $H_0$ in light of this data while Bob chooses not to reject $H_0$.
+What can we conclude about Alice's $\alpha$-level compared to Bob's?
+Why?
+
+***
+
+Alice's alpha level is larger than Bob's. Under a same distribution, a higher quantile means a more extreme threshold, and that a smaller alpha value means a higher quantile in that distribution. Even if $T$ is the same, since Bob has a more extreme threshold, he is not able to reject the null, whereas Alice has a less extreme threshold, and she rejects the null.
+
+***
+
+c) By definition, decreasing the level of a test (i.e., decreasing $\alpha$) decreases the probability of a Type I error (i.e., mistakenly rejecting the null when the null is true). We said in lecture that generally speaking, decreasing $\alpha$ will also *increase* the probability of a Type II error.
+Why should this be true?
+
+__Note:__ this is a tricky question! Generally speaking, if $\alpha$ is smaller, then we need to see more extreme values of our test statistic in order to reject the null hypothesis. Now, if we require more extreme values of our test statistic to reject the null hypothesis, what happens to our willingness/ability to reject the null hypothesis when it is *not* true?
+
+***
+
+Decreasing the alpha level means that we need more extreme values of the test statistic in order to reject the null, which means that some values that are not extreme enough will result in accepting the null. Since in many cases we do not know if the null is correct, we might accept it under small alpha and turns out that the null is false.
+
+***
+
+## 3) Testing coin flips
+
+Of the six sequences below, **only one** of them is actually randomly generated from a fair coin (i.e., one in which $\Pr[\text{heads}]=\Pr[\text{tails}]$ and coinflips are independent from one toss to the next). Use a combination of everything you know (common sense, Monte Carlo, hypothesis testing, etc.) to identify which is actually random, and explain your reasoning.
+__Note:__ there are no strictly right or wrong answers here (though of course there are better and worse answers). Just make sure that your reasoning is sound and clearly explained.
+
+If you are up for an additional challenge (__optional__-- not worth any points), try to associate probabilities (e.g., p-values) to your claim(s).
+
+```{r}
+flips1 <- "HTHTHTHTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHTHTHTHHTTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHTTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTH"
+
+flips2 <- "HHHTHTTTHHTHHTHHHTTTTHTHTHHTTHTHHHTHHTHTTTHTHHHTHTTTHTHTHHTHTHTTHTHHTHTHTTTHTHHHTHTHTTHTHTHHTHTHTHHHTHTTTHTHHTHTHTHHTTTHTHHTHHTTTTHTHTHHHTHTTHTHHTHTHTTHTHHTHTHHHTHHHTHTTTHTTHTTTHTHHHTHTHTTHTHHTHHTHTTT"
+
+flips3 <- "HHTHTHTTTHTHHHTHHTTTHTHHTHTTTHTHTHHTHTHTTHTHHHHHHTTTHTHTHHTHTTTHTHHTHTHTTTHTHHHTTHTTTHTHTHHHHTHTTHHTTTTTHTHHHTHTHTTTTTHHHTHHTHHTHHHTTTTHTHTHHHTHHTTTTTHTHHHTHTHTHTTTHTHHHTHTHTHTTHTHHTHTHTHTTTTHTHHHTHTH"
+
+flips4 <- "HTHHHHHHHTHTTHHTTHHHTHTHTTTHHTHHHTHHTTHTTTTTTTTTHTHHTTTTTHTHTHTHHTTHTTHTTTTTHHHTHTTTHTHTHHHTHTTTTHTHTHHTTHTHTTHHTHTHHHHTHTTHHTTHTTHTTHTHHHHHHTTTTTTHHHTTHTHHHHTTTHTTHHHTTHTHHTTTHHTHHTTTHTHHTHHHTHHTTHHH"
+
+flips5 <- "HHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHHTTTTTTTTTTHHHHHHHHHHTTTTTTTTHHHHHHHHTTTTTTTHHHHHHHHHTTTTTTTTTHHHHHHHHTTTHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHHTTTTTTTTTTHH"
+
+flips6 <- "TTHTTTHTTTTTTTHTHTHTHTTHTTHTHHTHHTTTHHTHTTTHTHHTHHHTHTTHHTHHTTHTHTTTTHTHTTTHHTTTTTTTTHTHHTTHTTTTTTHTHTHTHTTTHTTHHTTHTTTHHTTTHTTHTTTTHTTTTHHTTTHTHTHHHTTTTTTHTHHTTTTTTTTTTTTHHHTTTHHHTTTHTTTHTHTTHTTTTTHT"
+
+# you can use the function below to split the above strings into vectors of flips
+split <- function(str) {
+  return(strsplit(str, split = "")[[1]])
+}
+get_consec <- function(x, which) {
+  if (typeof(x) == "character") {
+    r <- rle(split(x))
+    return (max(r$lengths[r$values == which]))
+  }
+  r <- rle(x)
+  return (max(r$lengths[r$values == which]))
+}
+
+get_changes <- function (x) {
+  count <- 0
+  n <- length(x)
+  for (i in 1: (n - 1)) {
+    if (x[i] != x[i + 1]) {
+      count <- count + 1
+    }
+  }
+  return (count)
+}
+
+binom.test(x = sum(split(flips1) == "H"), n = 200, p = 0.5)
+binom.test(x = sum(split(flips2) == "H"), n = 200, p = 0.5)
+binom.test(x = sum(split(flips3) == "H"), n = 200, p = 0.5)
+binom.test(x = sum(split(flips4) == "H"), n = 200, p = 0.5)
+binom.test(x = sum(split(flips5) == "H"), n = 200, p = 0.5)
+binom.test(x = sum(split(flips6) == "H"), n = 200, p = 0.5)
+
+NMC <- 1e4
+longest_consec_head <- rep(0, NMC)
+longest_consec_tail <- rep(0, NMC)
+n_changes <- rep(0, NMC)
+for (i in 1:NMC) {
+  sim <- rbinom(200, 1, 0.5)
+  longest_consec_head[i] <- get_consec(sim, 1)
+  longest_consec_tail[i] <- get_consec(sim, 0)
+  n_changes[i] <- get_changes(sim)
+}
+
+hist(longest_consec_head)
+abline(v = get_consec(flips2, "H"), col='red')
+abline(v = get_consec(flips3, "H"), col='green')
+abline(v = get_consec(flips4, "H"), col='blue')
+
+hist(longest_consec_tail)
+abline(v = get_consec(flips2, "T"), col='red')
+abline(v = get_consec(flips3, "T"), col='green')
+abline(v = get_consec(flips4, "T"), col='blue')
+
+hist(n_changes, xlim = c(70, 150))
+abline(v = get_changes(split(flips2)), col = 'red')
+abline(v = get_changes(split(flips3)), col = 'green')
+abline(v = get_changes(split(flips4)), col = 'blue')
+```
+
+***
+
+We first ruled out flips1 and flips5 since it's unlikely that the real coin would flip like this using common sense. Then we ruled out flips6 since its p-value is too small and 0.5 is outside its 95 percent confidence interval. Then for each of flips 2, 3, and 4, I graph them using three different test statistics: the number of the longest consecutive heads, the number of the longest consecutive tails, and the number of changes between heads and tails. On the graph, we can see that flips2 is very unusual compare to the simulated coin flips in all three criteria, so we can rule out flips2. Flips3 also appears to be off the chart and too extreme on the number of changes between heads and tails, so we can rule out flips3. Flips4, despite appearing to be a little "unusual" on the graph of the longest consecutive tail, it's not off the chart like flip3, and appears normal on the number of changes graph. Therefore, I think flips4 is actually randomly generated from a fair coin.
+
+***

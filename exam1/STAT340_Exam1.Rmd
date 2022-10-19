@@ -1,0 +1,418 @@
+---
+title: "STAT340 Exam 1, Fall 2022"
+author: Jeffrey
+date: 10/17/2022
+output: html_document
+---
+
+## Instructions
+
+Update the "author" and "date" fields in the header and complete the exercises below.
+When you have completed the exam, knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Reminder:__ exams turned in more than three hours after starting the exam or after the close of the exam window at 3pm on Wednesday October 19th __will not__ be accepted.
+If you wish to be careful, you may want to make a point to knit your document every so often while completing the exam.
+
+You __may not__ discuss this exam with any person other than the instructor and the TAs until after the exam has closed (i.e., after the quiz is no longer accessible on Canvas).
+You may use any and all course materials, including lecture notes, textbooks, other readings, previous homeworks, and the built-in R documentation.
+You __may not__ use any resources not linked to by either the canvas page, lecture notes or the course webpage.
+
+Violation of these restrictions, such as discussing the exam with other students or searching for solutions online, will result in a zero on the exam and will be reported to the Office of Student Conduct. 
+
+***
+
+## Problem 1: Working with Random Variables
+
+Let's warm up with an easy one.
+The following questions are about random variables.
+
+### Part a: Generating from a Poisson distribution
+
+Use `rpois` to generate a vector of 100 draws from a Poisson random variable with rate parameter $\lambda = 3.14$ and compute the mean of the resulting vector of random variables.
+
+```{r}
+vec <- rpois(100, lambda = 3.14)
+mean(vec)
+```
+
+### Part b: Creating a histogram
+
+Create a histogram of the data generated in part (a) above.
+Add two vertical lines to your plot:
+
+-one in black, indicating the true population mean $\lambda=3.14$, and
+-another in red, indicating the observed mean of your sample generated in part (a).
+
+You may use either `ggplot2` or the built-in R plotting functions to create this plot, whichever you prefer.
+
+```{r}
+hist(vec)
+abline(v = 3.14, col = 'black')
+abline(v = mean(vec), col = 'red')
+```
+
+### Part c: Applying the Poisson to physics
+
+The Poisson distribution is a popular choice of distribution for modeling the number of particles detected per unit time in physics experiments.
+Suppose that we model the number of neutrinos arriving at a detector in a second as being distributed as a Poisson random variable with rate parameter $\lambda=100$.
+Use `ppois` to compute the probability that __at least__ $100$ neutrinos arrive at our detector in a one-second experiment.
+
+```{r}
+1 - ppois(100, 100)
+```
+
+### Part d: Generating from a normal
+
+Write R code to generate 10,000 ($10^4$) standard normal random variables.
+How many of these random variables fall within one standard deviation of the mean?
+Two standard deviations of the mean?
+Three?
+```{r}
+normals <- rnorm(1e4)
+sum(normals >= -1 & normals <= 1)
+sum(normals >= -2 & normals <= 2)
+sum(normals >= -3 & normals <= 3)
+
+```
+
+### Part e: maximum of exponentials
+
+Implement a function `rmaxexp` that takes two arguments, `n` and `m`, where both `n` and `m` are positive integers and returns `n` independent copies of the following random variable:
+$$
+Z = \operatorname{max}_{i \in \{1,2,\dots,m\} } X_i,
+$$
+
+where $X_1,X_2,\dots,X_m$ are independent draws from an exponential distribution with rate parameter $1$.
+
+You may assume that both `n` and `m` are positive integers, so there is no need to do any error checking, and there is no need to worry about the case where `n=0` or `m=0`.
+
+```{r}
+rmaxexp <- function(n, m) {
+       # TODO: code goes here
+       # Hint:
+       # Create a length-n vector v and
+       # repeat the following n times, storing results in the entries of v:
+       # first generate m Exp(1) random variables,
+       # THEN find their maximum.
+
+       v <- rep(0, n)
+       for (i in 1:n) {
+              v[i] <- max(rexp(m))
+       }
+
+       return (v)
+}
+```
+
+***
+
+## Problem 2: Estimating a Probability Using Monte Carlo
+
+Consider the following game: we give each of $100$ people a unique number $1,2,\dots,100$, and we label each of $100$ chairs with the numbers 1 through 100 (so that each chair has a unique number from $1,2,\dots,100$).
+Now, we randomly assign people to chairs.
+Let $p_{100}$ be the probability that *no person* is sitting in a chair that matches their number.
+Let's use Monte Carlo simulation to estimate $p_{100}$.
+
+### Part a: implement the experiment
+
+Implement a function `random_seating`, which takes no arguments and returns a Boolean.
+The function should simulate the experiment described above and return a Boolean encoding whether or not the experiment "succeeded" in assigning all 100 people to a seat that *doesn't* match their number.
+That is, your function should run the "seating" experiment described above and return `TRUE` if no person's number matches their seat and `FALSE` otherwise.
+
+__Hint:__ assigning each of the 100 people to a seat is equivalent to randomly shuffling the sequence `1:100`, i.e., `c(1,2,3,...,100)`.
+Then it just remains to check whether the $i$-th person ended up sitting in the $i$-th seat for any `i=1,2,3,...,100`, which can be done with a simple comparison with a well-chosen vector.
+
+```{r}
+random_seating <- function() {
+       # TODO: write code that randomly assigns 100 people to 100 seats
+       # TODO: check if any person ended up in the seat matching their number.
+       # If not, return TRUE. If so, return FALSE.
+
+       seating <- sample(seq(1:100), size = 100, replace = FALSE);
+       for (i in 1:100) {
+              if (i == seating[i]) {
+                     return (FALSE)
+              }
+       }
+       return (TRUE)
+
+}
+```
+
+### Part b: estimating $p_{100}$
+
+Use your function `random_seating` to implement a Monte Carlo simulation and estimate $p_{100}$.
+Your simulation should use at least $1000$ Monte Carlo iterates.
+You are free to choose this number to be larger if you wish, but be careful that you don't choose it so large that your file takes too long to knit!
+__Hint:__ start with a much smaller number of Monte Carlo iterates (e.g., 10 or 100), and increase it only once you are confident that your code is working.
+
+```{r}
+
+# TODO: Monte Carlo code goes here.
+
+# TODO: don't forget to include code that actually evaluates your answer!
+# Something like (uncomment this next line if you want)
+# estimate_of_p100 <- ESTIMATE_GOES_HERE
+
+N <- 1e4
+success <- 0
+for (i in 1:N) {
+       if (random_seating()) {
+              success <- success + 1
+       }
+}
+success / N
+```
+
+***
+
+## Problem 3: The inverse trick
+
+Consider a cumulative distribution
+
+$$
+F(t) = \begin{cases}
+       0 &\mbox{ if } t \le 0 \\
+       \frac{1}{2} + \frac{1}{\pi} \operatorname{arcsin}(2t-1) &\mbox{ if } 0 < t \le 1 \\
+       1 &\mbox{ if } t > 1.
+       \end{cases}
+$$
+
+and suppose that the random variable $X$ is distributed according to this CDF, so that $\Pr[ X \le t ] = F(t)$ for any $t \in \mathbb{R}$.
+
+__Reminder:__ $\operatorname{arcsin} x$ is the *inverse sine* of $x$, meaning, the number $\theta$ such that $\operatorname{sin} \theta = x$, defined for all $x \in [-1,1]$.
+
+### Part a: Implement $F(t)$.
+
+Write a function `examCDF` that takes a single argument `t` and returns $F(t)$ as defined in the equation above.
+You may assume that `t` is a numeric, so there is no need to perform any error checking.
+
+__Hint:__ `asin(t)` will compute the arc-sin (i.e., inverse of the sine function) in R.
+
+__Second hint:__ you can verify that your function is correct by checking that it agrees with the function $F(t)$ above.
+For example, check that `examCDF(2)` returns $1$, `examCDF(-1)` returns $0$, etc.
+
+```{r}
+examCDF <- function(t) {
+       if (t <= 0) {return (0)}
+       if (t > 0 & t <= 1) {return (1/2 + (1 / pi) * asin(2 * t - 1))}
+       if (t > 1) {return (1)}
+}
+```
+
+### Part b: take a derivative!
+
+Derive the density of $X$ by... deriving! Take the derivative of $F(t)$ to establish the density $f(t)$.
+Implement this function as `examdensity`, a function that takes a single argument `t` and returns $f(t)$.
+
+__Hint:__
+$$
+\frac{d}{dt} \operatorname{arcsin}(2t-1) = \frac{1}{\sqrt{t(1-t)}}.
+$$
+
+```{r}
+# Range
+examdensity <- function(t) {
+       if (t <= 0) {return (0)}
+       if (t > 0 & t <= 1) {return (1 / sqrt(t * (1 - t)))}
+       if (t > 1) {return (0)}
+}
+```
+
+### Part c: inverting a CDF
+
+Invert the CDF $F(t)$. That is, find the function $F^{-1}(t)$ such that
+$$ F( F^{-1} (t)) = t $$
+for all $0 < t < 1$.
+
+Implement it in R as a function `examCDFinv`, which takes one argument, `t`.
+You may assume `t` is a numeric strictly between `0.0` and `1.0`.
+
+You must perform the inversion analytically (i.e., determine a function in terms of $t$).
+Inverting the CDF numerically with `solve()` or similar functions in R is not allowed.
+
+__Hint:__ Be careful!
+Invert the CDF $F(t)$, not the density $f(t)$.
+Bear in mind that the arcsine (i.e., `asin` in R) is the inverse of the sine function (i.e., `sin` in R), and vice versa.
+
+```{r}
+
+examCDFinv <- function(t) {
+       return ((sin(pi * (t - 1/2)) + 1) / 2)
+}
+```
+
+### Part d : Generating random variables
+
+Use your function `examCDFinv` to generate 1000 independent random variables with distribution $F$.
+
+Make a *normalized* histogram of their distribution.
+Use your function `examdensity` to overlay the density function of these random variables on the plot (plotted as a solid line in whatever color you prefer).
+You may use the built-in R plotting functions or the `ggplot2` plotting functions, whichever you prefer.
+If you did not complete part (b), you may simply include the histogram with no overlaid density for partial credit.
+
+__Hint:__ Note that this part of the problem is a free way for you to check that your implementations above worked, provided you were able to complete part (b)-- if you plot that density, the histogram should resemble it.
+
+__Second hint:__ be careful that you are normalizing the histogram! If not, the density and histogram will be on very different scales and the plot won't make sense. See the `freq` argument to the `hist` function in R.
+
+```{r}
+dist <- runif(1000)
+res <- sapply(dist, examCDFinv)
+hist(res, breaks = 100, freq = FALSE)
+x <- seq(1,100,0.1);
+curve(Vectorize(examdensity)(x), add=TRUE, col='red' );
+```
+
+***
+
+## Problem 4: Constructing a Rejection Region
+
+These next few subproblems will ask you to determine rejection regions for certain choices of test statistic and different choices of level $\alpha$.
+
+### Part a: standard normal, one-sided test
+
+Suppose that we have a test statistic $T$, which is distributed as a standard normal under the null hypothesis.
+Give a rejection region for a __one-sided__ test with level $\alpha=0.05$ in which larger values of $T$ correspond to "more unusual" or "more surprising" outcomes.
+
+```{r}
+# reject if T > 1.64
+qnorm(0.95)
+```
+
+What if we change $\alpha$ from $0.05$ to $0.01$?
+
+```{r}
+# reject if T > 2.32
+qnorm(0.99)
+```
+
+### Part b: standard normal, two-sided test
+
+Suppose that our test statistic is still standard normal under the null, but now we wish to conduct a two-sided test (i.e., values of $T$ far from zero, be they positive or negative, correspond to more "unusual" data).
+Give a rejection region for a two-sided test with level $\alpha=0.05$.
+
+```{r}
+# Reject if T < -1.96 or T > 1.96
+qnorm(0.025)
+qnorm(0.975)
+```
+
+What if we change $\alpha$ from $0.05$ to $0.01$?
+
+```{r}
+# Reject if T < -2.58 or T > 2.58
+qnorm(0.005)
+qnorm(0.995)
+```
+
+### Part c: exponential, one-sided test
+
+Now, suppose that our test statistic $T$ is distributed as an exponential random variable with rate parameter $1$, and we wish to conduct a one-sided level $\alpha=0.05$ test in which larger values of $T$ correspond to more "unusual" outcomes.
+
+```{r}
+# reject if T > 2.995732
+qexp(0.95)
+```
+
+What if we change $\alpha$ from $0.05$ to $0.01$?
+
+```{r}
+# reject if T > 4.60517
+qexp(0.99)
+```
+
+***
+
+## Problem 5: Assessing a Treatment using a Permutation Test
+
+Pet products startup Catamaran is testing a new medication designed to reduce the occurrence of hairballs in house cats.
+Local cat enthusiasts volunteered their cats for a study of the effectiveness of the new medication.
+A total of 50 cats were enrolled in the study, assigned randomly to either the control group or treatment group.
+Cats assigned to the treatment group were treated with the medication, while cats assigned to the control group were given a placebo.
+Trial subjects were then monitored for the next week, and the total number of hairballs produced by each cat was recorded.
+The resulting data is recorded below.
+```{r}
+# Treatment data
+# Number of hairballs coughed up by each of the 25 cats in the treatment group.
+treatment <- c(3, 2, 4, 4, 3, 4, 1, 2, 4, 5, 2, 5, 3, 0, 3, 2, 2, 3, 4, 5, 3, 2, 1, 3, 2)
+# Control data
+# Number of hairballs coughed up by each of the 25 cats in the control group.
+control <- c(1, 2, 1, 3, 1, 0, 1, 3, 2, 4, 2, 3, 5, 2, 2, 3, 3, 1, 3, 2, 2, 4, 0, 1, 2)
+```
+
+We will assume that the elements of `treatment` are drawn independently from a distribution $F_{\text{treatment}}$ and the elements of `control` are drawn independently from $F_{\text{control}}$, with the two groups being generated independently of one another.
+
+### Part a: choosing a test statistic
+
+We are going to conduct a permutation test to assess the null hypothesis that the vectors `treatment` and `control` come from the same distribution.
+That is, a test of the null hypothesis
+$$
+H_0 : F_{\text{control}} = F_{\text{treatment}}.
+$$
+
+To start, choose a test statistic for your test and implement it as `test_stat( ctl, trt)` (where `ctl` and `trt` are vectors encoding the control and treatment observations, respectively) in the code block below.
+You are free to choose any test statistic, so long as you can defend this choice (a sentence of two of explanation will be sufficient).
+The difference of means, as used in lecture, is a perfectly fine choice, but you should still defend this choice ("we used it in lecture" is not sufficient reason!).
+
+```{r}
+test_stat <- function(ctl, trt) {
+       return (mean(trt) - mean(ctl))
+}
+```
+
+***
+
+I chose the difference of means as my test statistics, since the average number of hairballs should reflect the effectiveness of the medication.
+
+***
+
+### Part b: conducting a permutation test
+
+Conduct a permutation test of the null hypothesis $H_0$ given above to produce a p-value.
+You may perform either a one-sided or two-sided test, but please specify which you are choosing (and why)-- a sentence or two is plenty.
+You test should use at least $1000$ Monte Carlo replicates.
+You are free to increase this number, but be careful that you don't choose a number so large that your document takes too long to knit!
+__Hint:__ you might want to start with the number of Monte Carlo iterates set reasonably low (e.g., 10 or 100), and increase it to $1000$ only once you are confident that your code is working correctly.
+
+```{r}
+permute <- function( ctl, trmt ) {
+       pooled <- c(ctl, trmt)
+       n_ctrl <- length(ctl)
+       n_trmt <- length(trmt)
+       n_total <- n_ctrl + n_trmt
+       shuffled <- sample(pooled, size=n_total, replace = FALSE)
+       shuff_ctrl <- shuffled[1:n_ctrl]
+       shuffled_trmt <- shuffled[(n_ctrl + 1): n_total]
+       return (test_stat(shuff_ctrl, shuffled_trmt))
+}
+
+N <- 1e4
+test_statistics <- rep(0, N)
+for (i in 1:N) {
+       test_statistics[i] <- permute(control, treatment)
+}
+p <- sum(test_statistics <= test_stat(control, treatment)) / N
+p
+```
+
+***
+
+I chose to use a one-sided test. When testing medications, we only care about how "good" this medication is and do not care about how "bad" it is. Therefore, a one-sided test is sufficient here.
+
+***
+
+### Part c: to accept or reject?
+
+Suppose that our client wishes to test their hypothesis at level $\alpha=0.05$.
+Should they accept or reject the null hypothesis?
+What if they wish to test their hypothesis at level $\alpha = 0.01$?
+
+```{r}
+# TODO: code, if necessary, goes here.
+```
+
+***
+
+If $\alpha=0.05$, they should accept the null hypothesis since our p-value 0.9857 is greater than 0.05. If $\alpha=0.01$, they should  also accept the null hypothesis since 0.9857 is larger than 0.01.
+
+***

@@ -1,0 +1,352 @@
+---
+title: "STAT340 Exam 1 Practice Problems"
+author: "Keith Levin and Bi Cheng Wu"
+date: "Fall 2022"
+output: html_document
+---
+
+## Problem 1: Monte Carlo Integration, or Computation > Math
+
+We mentioned in lecture that one of the most important applications of Monte Carlo methods is to the approximation of integrals that would otherwise be hard to compute.
+Who doesn't like making computers do their annoying integrals for them?!
+
+Suppose that we have a function $f : [0,1] \rightarrow \mathbb{R}$, and we want to compute the integral of $f$ over the interval $[0,1]$.
+That is, we want to compute
+
+$$
+  \int_0^1 f(x) dx.
+$$
+
+Recall that the basic idea is that to approximate this integral by drawing points randomly from a uniform distribution on $[0,1]$, evaluating $f$ on each of those points, and taking the mean of those values.
+
+That is, we draw $X_1,X_2,\dots,X_n$ i.i.d. from $\operatorname{Unif}(0,1)$ and estimate the integral above as
+
+$$
+\frac{1}{n} \sum_{i=1}^n f(X_i).
+$$
+
+Before we charge ahead, let's take a quick aside to talk about an interesting feature of programming languages like R that you may not be familiar with.
+Many programming languages, including R, have what are called "first class functions".
+That is a fancy way of saying that functions are perfectly good arguments to be passed into functions.
+That's right-- we can pass a function into another function!
+Here's an example.
+This function takes two arguments: a function `f` and a numeric `x` and returns `f(x)`.
+
+```{r}
+evaluate_fn <- function( f, x ) {
+  return( f(x) )
+}
+```
+
+The variable `f` points to a function!
+As an example, let's try taking the square root of 49 with this pattern.
+Of course, in practice, we could just call `sqrt(49)`, but we are using this to illustrate the idea-- we'll see a practical example below.
+
+```{r}
+evaluate_fn( sqrt, 49 )
+```
+
+Note also that above we said that we are assuming `x` to be numeric, but really all that we need is that we can sensibly write `f(x)`, whatever `f` is.
+
+The point of the examples above is that R allows variables to take functions (technically, function handles) as their values, and lets us pass those functions into other functions and assign those function names to variables.
+
+### Part a: Monte Carlo integration in general
+
+Okay, we promised above that we would use this "first class functions" business for something useful, so here we go.
+
+Write a function `mc_integrate` that takes two arguments: a function `f` (here's where it's important that variables in R can be functions!) and a positive integer `M` and returns a Monte Carlo estimate of the integral of the function `f` from $0$ to $1$ based on $M$ independent uniforms.
+You may assume that the argument `f` is indeed a function for which you can safely write `f(t)` for any numeric variable `t` with value between `0.0` and `1.0` inclusive.
+You may also assume that the argument `M` is a positive integer.
+
+```{r}
+
+mc_integrate <- function( f, M ) {
+  
+  reps <- rep(NA, M);
+  for( i in 1:M ) {
+    reps[i] <- f( runif(1, 0, 1) );
+  }
+  return( mean(reps) );
+  
+}
+
+# Example: integrate f(t) = t^2. You can check that the integral from 0 to 1 of this function is 1/3.
+test_fn <- function( t ) {
+  return( t^2 )
+}
+# The result of this function call should be close to 1/3=0.33333....
+mc_integrate( test_fn, 1000 )
+```
+
+### Part b: putting it to use
+
+Use your implementation of `mc_integrate` to (approximately) evaluate
+
+$$
+\int_{-1}^1 \frac{1}{\sqrt{2\pi}} e^{-x^2/2} dx,
+$$
+
+i.e., the probability that a normal random variable falls within one standard deviation of the mean.
+
+### Part c: evaluating our answer
+
+Compute the true value of this quantity using R (recalling that the integrand is just the density of the standard normal, so you can use `pnorm`).
+
+How good is your approximation? Try varying the argument `M` to `mc_integrate`. How does the approximation change (of course, there is randomness here, so you might want to try multiple trials and average their error).
+
+***
+
+First, observe that by symmetry,
+$$
+\int_{-1}^1 \frac{1}{\sqrt{2\pi}} e^{-x^2} dx,
+= 2 \int_{0}^1 \frac{1}{\sqrt{2\pi}} e^{-x^2} dx
+$$
+
+
+```{r}
+2*mc_integrate( dnorm, 1000 )
+```
+We know that the probability of being within one standard deviation of the mean is about 0.68.
+
+Look at some different values of `M`.
+
+```{r}
+2*mc_integrate( dnorm, 10 )
+```
+```{r}
+2*mc_integrate( dnorm, 100 )
+```
+You'll find if you run these functions multiple times that the `n=10` case is much higher variance (i.e., the values are more "all over the place").
+
+## Problem 2: Hypothesis testing for a rate parameter
+
+The following code downloads and loads data from the course webpage.
+
+```{r}
+
+download.file('https://kdlevin-uwstat.github.io/STAT340-Fall2021/Exam1/exam1_practice_exp_data.csv',
+              destfile='exam1_practice_exp_data.csv')
+
+exp_data <- read.csv("exam1_practice_exp_data.csv")
+head(exp_data)
+```
+
+Use whatever tools you like to test the hypothesis
+
+$$
+H_0: \text{the data is generated iid from an exponential with rate parameter } 3.
+$$
+
+__Hint:__ the mean of an exponential distribution with rate parameter $\lambda$ is given by $1/\lambda$.
+
+#### Solution
+
+Under the null hypothesis, the mean of our data will have a certain distribution.
+One can in fact derive this distribution exactly and construct a rejection region from it, but let's use Monte Carlo instead.
+
+We'll use the absolute difference between the observed mean and the expected mean (i.e., the mean of our null distribution) as our test statistic.
+When the null is false, we expect the mean of our data to be farther from the mean of the null, $1/\lambda_0 = 1/3$ (again, remember that the mean of an exponential with rate $\lambda$ is $1/\lambda$).
+To estimate the sampling distribution of this test statistic under the null, we need to generate lots of samples of the same size as our observed data and compare the behavior of the means of those samples to our actually observed .
+
+```{r}
+# Compute the mean of our observed data
+mean_obsd <- mean(exp_data$x1);
+# Now generate some fake data repeatedly and record the estiamtes on those samples.
+M <- 1e4;
+n_data <- length(exp_data$x1);
+replicates <- rep( NA, M );
+for( i in 1:M ) {
+  fakedata <- rexp(n=n_data, rate=3)
+  replicates[i] <- mean(fakedata);
+}
+
+# Now, we know that on average our mean should be 1/rate = 1/3.
+mean_H0 <- 1/3;
+# Now count how often our "observe"fake data" mean was farther from
+# the mean of the null distribution than was our observed mean
+pval <- sum( abs(replicates-mean_H0) >= abs(mean_obsd-mean_H0) )/M;
+
+pval
+```
+
+That p-value above is going to be random, so it will change each time you run this code, but it will usually be decidedly smaller than $0.05$, indicating that we should reject the null hypothesis at this level.
+ 
+## Problem 3: Inverting a CDF
+
+Consider a cumulative distribution
+
+$$
+F(t) = \begin{cases}
+       1 - \frac{1}{t^2} &\mbox{ if } t > 1 \\
+       0 &\mbox{ otherwise }
+       \end{cases}
+$$
+
+and suppose that the random variable $X$ is distributed according to this CDF, so that $F(t) = \Pr[ X \le t ]$ for any $t \in \mathbb{R}$.
+
+### Part a: Implement $F(t)$.
+
+Write a function `examCDF` that takes a single argument `t` and returns $F(t)$ as defined in the equation above. You may assume that `t` is a numeric.
+
+```{r}
+examCDF <- function( t ) {
+  
+  if( t <= 1) {
+    return( 0.0 );
+  } else {
+    return( 1-1/t^2);
+  }
+}
+```
+
+### Part b: take a derivative!
+
+Derive the density of $X$ by... deriving! Take the derivative of $F(t)$ to establish the density $f(t)$.
+Implement this function as `examdensity`, a function that takes a single argument `t` and returns $f(t)$.
+
+```{r}
+examdensity <- function(t) {
+  
+  if( t <= 1) {
+    return( 0.0 );
+  } else {
+    return( 2/t^3);
+  }
+  
+}
+```
+
+### Part c: inverting a CDF
+
+Invert the CDF $F(t)$. That is, find the function $F^{-1}(t)$ such that
+$$ F( F^{-1} (t)) = t $$
+for all $0 < t < 1$.
+
+Implement it in R as a function `examCDFinv`, which takes one argument, `t`. You may assume `t` is a numeric strictly between `0.0` and `1.0`.
+
+__Hint:__ Be careful! Invert the CDF $F(t)$, not the density $f(t)$.
+
+```{r}
+
+examCDFinv <- function( t ) {
+  
+  return( 1/sqrt(1-t) ); # Valid so long as 0 < t < 1.
+  
+}
+```
+
+
+### Part d : Generating $F$-distributed random variables
+
+Use your function `examCDFinv` to generate 1000 independent random variables with distribution $F$.
+
+Make a *normalized* histogram of their distribution.
+Use your function `examdensity` to overlay the density of these random variables on the plot (plotted as a solid line in whatever color you prefer).
+You may use the built-in R plotting functions, or the `ggplot2` plotting functions, whichever you prefer.
+
+__Hint:__ Note that this part of the problem is a free way for you to check that your implementations above worked-- the histogram should resemble the density very closely!
+
+__Second hint:__ be careful that you are normalizing the histogram! If not, the density and histogram will be on very different scales and the plot won't make sense. See the `freq` argument to the `hist` function in R.
+
+```{r}
+
+data <- examCDFinv( runif(1000) );
+hist(data, breaks = 100, freq=FALSE);
+x <- seq(1,25,0.1);
+curve(Vectorize(examdensity)(x), add=TRUE, col='red' );
+```
+The density and histogram look pretty similar, which is good!
+
+## Problem 4: two-sample testing
+
+The following code downloads data from the course webpage.
+
+```{r}
+
+download.file('https://kdlevin-uwstat.github.io/STAT340-Fall2021/Exam1/exam1_practice_twosamp_data.csv',
+              destfile='exam1_practice_twosamp_data.csv')
+
+twosamp_data <- read.csv(file='exam1_practice_twosamp_data.csv')
+head(twosamp_data)
+```
+
+This data set represents samples from a study of two different populations: `A` and `B`.
+Each row corresponds to a single observation in the study.
+The data frame has two columns: `population`, which takes values `A` and `B` according to which of the two populations (A or B) the observation was sampled from, and `score`, which records the score measured for that observation.
+
+### Part a: testing equivalence of means
+
+Use what you know to perform a permutation test to assess the null hypothesis
+
+$$
+H_0 : \text{ the two populations are distributionally identical }
+$$
+
+```{r}
+# We'll adapt the permutation testing approach we saw in lecture
+# to perform a two-sided hypothesis test.
+# Each MC replicate, we will randomly assign the data to two groups and compare their means and take an absolute value of the difference.
+# That is, we are using the test statistic
+# T = "absolute difference of means"
+# Then we'll see how the true difference in means compares to these.
+
+Nrep <- 1e4;
+reps <- rep( NA, Nrep)
+n <- nrow(twosamp_data);
+
+for( i in 1:Nrep ) {
+  inds <- sample(1:n, n/2, replace=FALSE );
+  reps[i] <- abs( mean(twosamp_data[inds,]$score) - mean(twosamp_data[-inds,]$score) )
+}
+
+# Compute our test statistic on the real data.
+# Note that we could get these means with a more graceful GroupBy operation,
+# But I want to make it very clear what we are computing here.
+Ainds <- (twosamp_data$population=='A');
+Ascores <- twosamp_data[Ainds,]$score;
+Amean <- mean( Ascores );
+Binds <- (twosamp_data$population=='B');
+Bscores <- twosamp_data[Binds,]$score;
+Bmean <- mean( Bscores );
+obsd_diff <- abs( Amean-Bmean );
+
+# Compute a p-value by counting what proportion of our samples
+# had a larger distance from the mean than the observed data.
+pval <- sum( reps >= obsd_diff)/Nrep;
+pval
+```
+
+Unless you got very (un)lucky, that p-value should be decidedly larger than $0.05$, so we will fail to reject the null hypothesis.
+
+### Part b: testing normals
+
+Okay, now let's do something parametric (i.e., make an assumption about the distribution).
+Use a t-test to test the hypothesis
+
+$$
+H_0: \text{ the two populations are both drawn according to the same normal. }
+$$
+
+Said another way, $H_0$ states that all forty observations in the data set come from the same $\operatorname{Normal}(\mu,\sigma^2)$ distribution, for some choice of mean $\mu$ and variance $\sigma^2$.
+
+You may recall that there are a number of related t-tests (e.g., Student's t-test, Welch's t-test, etc.).
+Read the R documentation and/or the course textbooks for the differences among these if you are curious, but you have my permission to use the built-in R `t.test` with all the default settings, except be sure to set `var.equal = TRUE` to ensure that our null hypothesis includes the fact that the two populations have the same variances.
+
+#### Solution
+
+```{r}
+test_result <- t.test(Ascores, Bscores, var.equal=TRUE);
+test_result$p.value
+```
+
+So we still fail to reject the null hypothesis at level $\alpha=0.05$.
+
+Interestingly, the true data-generating mechanism was that the data were indeed normal, but they had *different* variances.
+Compare
+```{r}
+c( var(Ascores), var(Bscores) );
+```
+
+Neither of our tests above detected this difference in variances, because both our permutation test and our t-test are in a sense only concerned with differences of means (in the case of the permutation test, this is because we used the difference of means as our test statistic; in the case of the t-test it's because we used `var.equal=TRUE`).
+
+You may find it interesting to try other versions of the t-test (see the R documentation and/or Wikipedia) or to try using other test statistics (e.g., difference of sample variances or a Studentized difference of means, i.e., the difference between the means normalized by a pooled standard deviation) .
