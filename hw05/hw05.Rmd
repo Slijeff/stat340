@@ -1,0 +1,403 @@
+---
+title: "STAT340 HW05: Independence, Conditional Probability and Bayes' Rule"
+author: "TODO:name"
+date: "October 2022"
+output: html_document
+---
+
+------------------------------------------------------------------------
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+------------------------------------------------------------------------
+
+## Instructions
+
+Update the "author" and "date" fields in the header and complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+**Due date:** October 20, 2022 at 11:59pm.
+
+------------------------------------------------------------------------
+
+**Important:** this homework is based on our week 5 lectures, and draws in some ways on our week 4 lectures on testing, which were on the more conceptual side compared to most of the course so far (and compared to what we'll do in most of the rest of the course!).
+As a result, this homework is one of the most conceptually challenging of the semester.
+Start early, and be sure to come to office hours with questions!
+
+## 1) The peril of ignoring covariance
+
+In lecture, we saw that while the expectation of a sum is the sum of the expectations, $\mathbb{E}(X+Y) ] = \mathbb{E} X + \mathbb{E} Y$, the same is not true for variance.
+We saw that $$
+\operatorname{Var}(X + Y)
+=
+\operatorname{Var} X
++ 2\operatorname{Cov}(X,Y)
++ \operatorname{Var} Y.
+$$
+
+The following code generates correlated data from a multivariate normal, just as we did in lecture (both in our first week and this past week, in our discussion of simulating state-level election data in Wisconsin and Michigan).
+Remember, we have two variables: $W_p$ and $M_p$, each of which are normal, and they are jointly distributed as a multivariate normal.
+
+```{r}
+library(MASS)
+# This library includes a multivariate normal
+mu <- c(.5, .5)
+# Vector of means; both W_p and M_p are mean 1/2.
+# Make a two-by-two symmetric matrix to encode variance and covariance
+CovMx <- matrix(c(.05^2, .04^2, .04^2, .05^2), nrow = 2)
+WpMp <- mvrnorm(n = 2000, mu = mu, Sigma = CovMx)
+# Separate the Wp and Mp variable for
+Wp <- WpMp[, 1]
+Mp <- WpMp[, 2]
+```
+
+### a) Estimating variance correctly and incorrectly
+
+[Goofus and Gallant](https://en.wikipedia.org/wiki/Goofus_and_Gallant) are tasked with *estimating* the the variance of $W_p + M_p$.
+We'll have a lot more to say about estimation in lecture the next two weeks.
+In short, Goofus and Gallant are trying to figure out a "good guess" as to the variance of $W_p + M_p$.
+Given a vector of data `x`, a common choice of "guess" as to the variance of the data is `var(x)`, which computes the sample variance of the data.
+This is the variance analogue of the sample mean.
+Again, we'll have more to say about this in our coming lectures, but let's just take this as given for now.
+
+Goofus estimates $\operatorname{Var}(W_p + M_p)$ variance by separately estimating $\operatorname{Var} W_p$ and $\operatorname{Var} M_p$, and then summing up those variances.
+Gallant estimates this variance directly by computing the sample variance of $W_p + M_p$.
+Implement both of these procedures by defining two functions:
+
+-   `goofus_estimate`, which takes two vectors as its arguments and returns the sum of the sample variances of those two vectors.
+-   `gallant_estimate`, which takes two vectors as its arguments and returns the sample variance of the sum of those two vectors.
+
+You may assume that the inputs to these functions are vectors of the same length and that calling the R function `var` on these vectors will not result in an error or `NA` (e.g., notice that `var(10)` returns `NA` in R).
+
+```{r}
+goofus_estimate <- function(w, m) {
+  # TODO: code goes here.
+}
+
+gallant_estimate <- function(w, m) {
+  # TODO: code goes here.
+}
+```
+
+### b) Assessing estimates
+
+Let's have a look at how close these two estimates of the variance are to their targets.
+A good estimate will be a number that is close to the true value of the number we are trying to estimate.
+In this case, that number is $$
+\operatorname{Var}(W_p + M_p)
+= \operatorname{Var} W_p + \operatorname{Var} M_p + 2\operatorname{Cov}(W_p,M_p)
+= 0.05^2 + 0.05^2 + 2*0.04^2
+= 0.0082,
+$$ where we looked up the variance and covariance numbers in the covariance matrix (`CovMx` in our generation code).
+Remember, that matrix (a matrix is just an "array of numbers"!) looks like $$
+\Sigma = \begin{bmatrix}
+0.05^2 & 0.04^2 \\
+0.04^2 & 0.05^2
+\end{bmatrix}
+=
+\begin{bmatrix}
+0.0025 & 0.0016 \\
+0.0016 & 0.0025
+\end{bmatrix}
+$$
+
+The on-diagonal entries are the variances, and the off-diagonal entry is the covariance between our two variables.
+
+Compare Goofus and Gallant's estimates of the variance to the true variance $0.0082$.
+Whose estimate is closer?
+Why might this be the case?
+Just a couple of sentences is plenty, here.
+
+```{r}
+# TODO: code comparing the estimates goes here.
+```
+
+------------------------------------------------------------------------
+
+TODO: short discussion/explanation goes here.
+
+------------------------------------------------------------------------
+
+## 2) Declaration of independence?
+
+The previous problem showed that we ignore covariance among data at our peril.
+Let's just drive that lesson home, this time in the context of hypothesis testing.
+
+A crucial assumption of the t-test (and just about every other test you'll see in your undergraduate career) is that the observations in our samples are independent.
+What happens when that assumption is violated, but we push ahead anyway?
+
+Let's consider two samples $X_1,X_2,\dots,X_n$ and $Y_1,Y_2,\dots,Y_n$, in which pairs $X_i$ and $X_{i+1}$ are correlated for all $i = 1,2,\dots,n-1$, and similarly for $Y_i$ and $Y_{i+1}$.
+That is, consecutive pairs of observations are correlated.
+This is the kind of structure we might see in "series data", such as stock returns or daily price data.
+
+Here's code for generating such data.
+`generate_correlated_sample(n,c)` will generate a vector of `n` observations in which eachentry is a normal with mean 0 and variance 1, and consecutive pairs of entries in the vector have covariance `c`.
+Note that if you choose `c` outside of the range $[-0.5,0.5]$, you'll encounter an error about `Sigma` not being positive definite.
+If you've taken linear algebra, you know exactly what this is.
+If you havent taken linear algebra, yet, no worries-- just know that only certain choices of `c` are possible while keeping the data normally distributed.
+
+```{r}
+generate_correlated_sample <- function(n, c) {
+  # Generate a sample of n mean-0 variance-1 normals,
+  # with consecutive pairs of those normals having covariance c.
+
+  # Construct the vector of means.
+  # We want mean 0, so this is just a vector of zeroes
+  meanvec <- rep(0, n)
+  # Construct the covariance matrix.
+  # On-diagonal entries are variances of our variables; all ones 1.
+  # Entries one step off the diagonal should have value c,
+  # encoding the fact that Cov( X_i, X_{i+1} ) = c.
+  # ("consecutive pairs" are correlated).
+  CovMx <- diag(1, n)
+  # Right now, CovMx is just a big n-by-n array,
+  # with 1s on the diagonal.
+  # We need to set the entries one step off the diagonal to c.
+  # One way to do that is to write a Boolean that picks out
+  # the diagonal entries.
+  # row(Mx) returns a matrix of the same size as Mx,
+  # whose entries encode the row numbers.
+  # See ?row and ?col for details.
+  # The entries "one step off the diagonal" are those where the
+  # difference between the row and column index are exactly one.
+  CovMx[abs(row(CovMx) - col(CovMx)) == 1] <- c
+
+  # Okay, we have our mean vector and our covariance matrix.
+  # Generate some data!
+  data <- mvrnorm(n = 1, mu = meanvec, Sigma = CovMx)
+  return(data)
+}
+```
+
+### a) Testing on correlated data
+
+Implement a function `run_correlated_test` that takes two arguments: `n` and `c`.
+Your function should generate two samples, both using `generate_correlated_sample(n,c)`, conduct a t-test (assuming equal variances) comparing those two samples, and then returns the p-value of that test.
+As mentioned above, only values of `c` between -0.5 and 0.5 are "valid" (in the sense that they do not cause an error).
+You may assume that `c` has a "valid" value, so there is no need for error checking or anything like that.
+
+```{r}
+run_correlated_test <- function(n, c) {
+  # TODO: code goes here.
+}
+```
+
+### b) Estimating the level of a correlated test
+
+Now, let's use Monte Carlo to estimate the level of the t-test for different choices of covariance `c`.
+Write a function `estimate_level` that takes our covariance `c` as its only argument, and runs $M=10,000$ repetitions of our test using `run_correlated_test` with $n=20$ observations in each sample, keeping track of how many times our test rejects at level $\alpha=0.05$.\`
+
+Your function should return the Monte Carlo estimate of the level of the test based on these $10,000$ Monte Carlo estimates.
+Said another way, `estimate_level(c)` should use Monte Carlo to estimate the level of a t-test applied to the correlated data described above when the covariance is `c`.
+
+**Note:** your function may need 30 seconds to a minute to run-- that is okay!
+Bear in mind that you're repeating an experiment 10,000 times.
+If each experiment takes just one 1/100th of a second, that's 100 seconds.
+Remember, Monte Carlo pays for convenience (i.e., less math) in compute time.
+That being said, if your code is taking more than a minute or so to run, that is a sign that something might be wrong.
+
+```{r}
+estimate_level <- function(c) {
+  # TODO: code goes here.
+}
+```
+
+As a sanity check, `estimate_level(0)` should return a number very close to $0.05$, since when `c=0`, the samples are indeed independent and the t-test should have level $\alpha=0.05$.
+
+```{r}
+## TODO: uncomment this for a sanity check.
+# estimate_level(0);
+```
+
+### c) Plotting
+
+Use your code to estimate the level of this test for values of `c` ranging from $-0.2$ to $0.2$ (inclusive!) in increments of 0.05.
+Again, bear in mind that running this experiment for several values of `c` will take a few minutes.
+Create a plot (using either `ggplot2` or the built-in plotting functions) showing the level of our test as a function of the covariance parameter `c`.
+Include a horizontal line in your plot indicating the level $\alpha=0.05$.
+
+```{r}
+# TODO: plotting code goes here.
+```
+
+Briefly describe your plot.
+What happens to the level of our test as we change the value of the covariance parameter `c`?
+
+------------------------------------------------------------------------
+
+TODO: a sentence or two of description goes here.
+
+------------------------------------------------------------------------
+
+## 3) Screening for a Disease
+
+In lecture, we discussed the problem of screening for a disease.
+We imagined that we had a test for a disease, that we had administered that test to a person, and that the test had come back positive.
+Our goal was then to determine the probability that our test subject had the disease, given this information.
+That is, we wanted to determine $\Pr[ \text{ disease} \mid \text{ positive test }]$.
+
+We used Bayes' rule to compute $$
+\Pr[ \text{ disease} \mid \text{ positive test }]
+=
+\frac{ \Pr[\text{ positive test } \mid \text{ disease}]
+        \Pr[ \text{ disease}]}
+        { \Pr[ \text{ positive test } ]  }
+$$
+
+In lecture, we noted how the probability $\Pr[ \text{ positive test } ]$ might be hard to estimate in general, since it would essentially require that we give our test to a large random sample of people.
+We specified $\Pr[ \text{ positive test } ] = 1.999*10^{-6}$ and left it at that.
+Let's revisit that and see a bit more about this quantity.
+
+This problem needs a bit of setup before we can state the actual problem for you to solve-- be sure to read the following carefully and make sure you understand it well before attempting to solve the programming portion!
+
+Let's begin by noticing that there are two possibilities: either our subject has a positive test result and has the disease, or our subject has a positive test result and doesn't have the disease.
+In set notation, we can write
+$$
+\{ \text{ positive test } \}
+=
+\{ \text{ positive test and has disease } \} 
+\cup
+\{ \text{ positive test and no disease } \}.
+$$
+
+These two right-hand sets are disjoint, so the additive property of probability implies that
+$$
+\Pr[ \text{ positive test } ]
+=
+\Pr[ \text{ positive test and has disease } ]
++
+\Pr[ \text{ positive test and no disease } ].
+$$
+
+Rearranging our definition of conditional probability, we find that $$
+\begin{aligned}
+\Pr[ \text{ positive test and has disease } ]
+&= \Pr[ \text{ positive test } \mid \text{ disease} ] ~\Pr[ \text{ disease } ] \\
+&\text{and} \\
+\Pr[ \text{ positive test and no disease } ]
+&= \Pr[ \text{ positive test } \mid \text{no disease} ] ~\Pr[ \text{ no disease} ] 
+\end{aligned}
+$$
+
+Putting this all together,
+$$
+\Pr[ \text{ positive test } ]
+=
+\Pr[ \text{ positive test } \mid \text{ disease} ] ~\Pr[ \text{ disease } ]
++
+\Pr[ \text{ positive test } \mid \text{no disease} ] ~\Pr[ \text{ no disease} ] .
+$$
+
+The quantities $\Pr[ \text{ positive test } \mid \text{ disease} ]$ and $\Pr[ \text{ positive test } \mid \text{no disease} ]$ are especially important in disease screening.
+
+**Sensitivity** $\Pr[ \text{ positive test } \mid \text{ disease} ]$ is called the *sensitivity* of our test.
+It essentially captures how well our test is able to detect the disease when it is present.
+
+**Specificity:** $\Pr[ \text{ negative test } \mid \text{ no disease } ] = 1-\Pr[ \text{ positive test } \mid \text{ no disease } ]$ is called the *specificity* of our test.
+It is the natural counterpart to sensitivity-- how reliable is our test at correctly determining that a subject doesn't have a disease.
+
+For our purposes here, it's easier to work with the false positive rate, $\Pr[ \text{ positive test } \mid \text{ no disease } ]$, which is $1$ minus the specificity, but it should be clear that they can be obtained from one another.
+
+### a) Computing $\Pr[\text{ positive test }]$
+
+Implement a function `pr_positive_test` that takes three arguments:
+
+-   `p_dis` : a number in $[0,1]$ that describes the probability that a randomly-chosen person has the disease.
+-   `sensitivity`: a number in $[0,1]$ representing the sensitivity of the test. That is, $\Pr[ \text{ positive test } \mid \text{ disease} ]$.
+-   `p_pos_given_nodis`: a number in $[0,1]$ representing the probability $\Pr[ \text{ positive test } \mid \text{ no disease } ]$, i.e., $1$ minus the specificity of the test.
+
+Your function should return $\Pr[ \text{ positive test }]$ using the formulas that we derived above.
+You may assume that all three arguments are probabilities (i.e., numbers between $0$ and $1$).
+
+```{r}
+pr_positive_test <- function(p_dis, sensitivity, p_pos_given_nodis) {
+  # TODO: code goes here.
+}
+```
+
+As a sanity check, you can verify that when `p_dis=1e-6`, `sensitivity=1-1e-5` and `p_pos_given_nodis=1e-5`, `pr_positive_test(, 1-1e-5, 1e-6)` returns something like `1.999989e-6`, i.e., approximately 1 in two million.
+
+```{r}
+## TODO: uncomment for a sanity check.
+## This should return something like 1.9999e-6.
+# pr_positive_test( 1e-6, 1-1e-5, 1e-6 )
+```
+
+### b) Disease screening
+
+Write a function `pr_disease_given_pos` that takes the same three arguments as `pr_positive_test` above, and returns $\Pr[ \text{ disease } \mid \text{ positive test } ]$.
+
+```{r}
+pr_disease_given_pos <- function() {
+  # TODO: don't forget to fill in the function arguments
+  # TODO: code goes here.
+}
+```
+
+### c) Testing Rare Diseases
+
+In lecture, we saw that when screening for a rare disease (e.g., a one in a million disease, as in our lecture example), a positive test is not especially informative-- remember that we determined that $\Pr[ \text{ disease} \mid \text{ positive test }]= 0.5002001$ in our illustrative example.
+**Note:** the example from lecture is not precisely the same as that for the figures given above in part (a).
+
+Let's explore this phenomenon a bit more.
+Let's fix sensitivity at $\Pr[\text{ positive test } \mid \text{ disease }] = 0.9999 = 1-10^{-4}$ (i.e., a 1 in 10,000 miss rate), and fix $\Pr[ \text{ positive test } \mid \text{ no disease } ]=10^{-3}$.
+
+Use your functions defined above to create a plot showing how $\Pr[ \text{ disease} \mid \text{ positive test }]$ changes as a function of $\Pr[ \text{ disease }]$.
+Specifically, create a plot with:
+
+-   $\Pr[ \text{ disease }]$ on the x-axis (ranging from $10^{-8}$ to $10^{-1}$, on a logarithmic scale; use your best judgment in selecting how many points to evaluate the function), and
+-   $\Pr[ \text{ disease} \mid \text{ positive test }]$ on the y-axis (you may or may not want to use a logarithmic scale here, too; use your best judgment).
+
+**Important Note:** You have been asked to use a range of values for $\Pr[ \text{ disease }]$, from $10^{-8}$ to $10^{-1}$, and to plot these on a *log scale*.
+A simple way to get this sequence is with something like `10**(-(8:1))`, which will output `1e-08 1e-07 1e-06 1e-05 1e-04 1e-03 1e-02 1e-01`.
+If you want a more finely-spaced sequence, you can use, for example, `10**( seq(8,1, by=-0.5) )`.
+As usual, use your best judgement in selecting this sequence-- so long as you do something reasonable, you'll receive full credit!
+If in doubt, explain your plotting decisions in a comment.
+
+```{r}
+
+# TODO: plotting code goes here.
+```
+
+### d) Estimating sensitivity and specificity
+
+The [National Breast and Cervical Cancer Early Detection Program (NBCCEDP)](https://www.cdc.gov/cancer/nbccedp/about.htm) is a program administered by the Center for Disease Control to improve access to screening for breast and cervical cancers.
+
+Data at the state level (and for several territories and tribal programs) are available from the CDC (see [here](https://www.cdc.gov/cancer/nbccedp/data/summaries/) if you're curious).
+If we take a look at the Wisconsin data, we find that of 4,049 Pap tests conducted through the program, 158 came back with abnormal results.
+Of these 158 abnormal tests, 116 were confirmed to be cervical cancers or premalignant lesions (i.e., cells likely to become cancers).
+
+Let's treat these pap tests as our screening, treat an "abnormal result" as a positive test result (i.e., indication of presence of a disease), and treat the 116 confirmed cases (i.e., confirmed cancers and premalignant lesions) as confirmed disease cases.
+Use these three numbers to estimate
+
+-   $\Pr[ \text{ positive test } ]$,
+-   $\Pr[ \text{ disease } ]$,
+-   $\Pr[ \text{ disease } \mid \text{ positive test } ]$.
+
+Using Bayes' rule, combine these estimates to estimate the specificity of this screening test, $\Pr[ \text{ positive test } \mid \text{ disease } ]$.
+
+You'll notice that the data set provided by CDC is not quite sufficient to perform all of this estimation: we don't know how many people in the study had cancer but tested negative on the screening, making it impossible to estimate $\Pr[ \text{ disease } ]$.
+Figure 1 in [this report](https://www.dhs.wisconsin.gov/publications/p0/p00379.pdf) from the Wisconsin Department of Health Services indicates that in 2015, just before our CDC data was collected, the incidence of cervical cancer in Wisconsin was a bit higher than 7 cases per 100,000 women.
+You'll notice, however, that if you use $7/100,000$ as your estimate for $\Pr[ \text{ disease }]$ above, weird things happen (I encourage you to try this, just to see what happens!).
+
+The problem arises from the fact that this 7 cases per 100K is the rate for all women in all of Wisconsin.
+Our CDC data above comes from a very different population-- they were already selected from among a very high-risk population!
+I tried and failed to find CDC data on cervix cancer in Wisconsin that would be more representative of this incidence rate, So let's just use the (completely fictional!) estimate $\Pr[ \text{ disease } ] = 0.03$.
+
+**Note:** later in your studies, you'll learn a lot about estimating probabilities like these ones.
+For now, we're going to use the simplest procedure we can, and the one that we are already familiar with from our discussions of Monte Carlo.
+We will estimate the probability of an event as the number of times something occurred divided by the number of times we "tried".
+So, for example, our estimate of the probability of a positive test is the number of positive tests divided by the total number of tests conducted.
+Think carefully about the three probabilities above and determine what the numerator and denominator should be in each of these cases.
+*You may find it useful to review the materials from discussion section.*
+
+**Important disclaimer:** in our discussion above, we are making a few simplifying assumptions and ignoring a few important things.
+Just as a simple example: The NBCCEDP program is targeted at people who might not otherwise be able to access cervical cancer screenings, so patients in this data set are not necessarily a sample from the population as a whole.
+If you look around in the data sets more closely, you'll notice that many of the reported figures are adjusted for age, to account for the fact that the data are skewed toward certain age ranges.
+Later in your studies (including later in this course!), you'll learn about how to adjust for these kinds of things, but we are ignoring these concerns here for the sake of simplicity, because this is just an exercise.
+Still, here once again is an example of the kinds of concerns we should always bear in mind when conducting our analyses.
+
+```{r}
+
+# TODO: if you need to do computations, you can put them here.
+```
