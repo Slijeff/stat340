@@ -1,6 +1,6 @@
 ---
 title: "STAT340 HW05: Independence, Conditional Probability and Bayes' Rule"
-author: "TODO:name"
+author: Jeffrey Hui
 date: "October 2022"
 output: html_document
 ---
@@ -71,11 +71,11 @@ You may assume that the inputs to these functions are vectors of the same length
 
 ```{r}
 goofus_estimate <- function(w, m) {
-  # TODO: code goes here.
+  return(var(w) + var(m))
 }
 
 gallant_estimate <- function(w, m) {
-  # TODO: code goes here.
+  return(var(w + m))
 }
 ```
 
@@ -109,12 +109,13 @@ Why might this be the case?
 Just a couple of sentences is plenty, here.
 
 ```{r}
-# TODO: code comparing the estimates goes here.
+goofus_estimate(Wp, Mp)
+gallant_estimate(Wp, Mp)
 ```
 
 ------------------------------------------------------------------------
 
-TODO: short discussion/explanation goes here.
+Gallant's estimation is closer to the real variance because Goofus' estimation ignores the covariance. Since $\operatorname{Var}(X + Y) =\operatorname{Var} X+ 2\operatorname{Cov}(X,Y)+ \operatorname{Var} Y$, Goofus' estimation missed the $2\operatorname{Cov}(X,Y)$ part.
 
 ------------------------------------------------------------------------
 
@@ -178,7 +179,10 @@ You may assume that `c` has a "valid" value, so there is no need for error check
 
 ```{r}
 run_correlated_test <- function(n, c) {
-  # TODO: code goes here.
+  s1 <- generate_correlated_sample(n, c)
+  s2 <- generate_correlated_sample(n, c)
+
+  return (t.test(s1, s2, var.equal = TRUE)$p.value)
 }
 ```
 
@@ -198,7 +202,13 @@ That being said, if your code is taking more than a minute or so to run, that is
 
 ```{r}
 estimate_level <- function(c) {
-  # TODO: code goes here.
+  n_rej <- 0
+  for (i in 1:10000) {
+    if (run_correlated_test(20, c) <= 0.05) {
+        n_rej <- n_rej + 1
+    }
+  }
+  return (n_rej / 10000)
 }
 ```
 
@@ -206,7 +216,7 @@ As a sanity check, `estimate_level(0)` should return a number very close to $0.0
 
 ```{r}
 ## TODO: uncomment this for a sanity check.
-# estimate_level(0);
+estimate_level(0);
 ```
 
 ### c) Plotting
@@ -217,7 +227,13 @@ Create a plot (using either `ggplot2` or the built-in plotting functions) showin
 Include a horizontal line in your plot indicating the level $\alpha=0.05$.
 
 ```{r}
-# TODO: plotting code goes here.
+intervals <- seq(-0.2, 0.2, 0.05)
+res <- rep(0, length(intervals))
+for (i in 1:length(intervals)) {
+    res[i] <- estimate_level(intervals[i])
+}
+plot(intervals, res)
+abline(h=0.05, col='red')
 ```
 
 Briefly describe your plot.
@@ -225,7 +241,7 @@ What happens to the level of our test as we change the value of the covariance p
 
 ------------------------------------------------------------------------
 
-TODO: a sentence or two of description goes here.
+As the covariance parameter c increases, the level of our test is getting larger and larger.
 
 ------------------------------------------------------------------------
 
@@ -311,7 +327,7 @@ You may assume that all three arguments are probabilities (i.e., numbers between
 
 ```{r}
 pr_positive_test <- function(p_dis, sensitivity, p_pos_given_nodis) {
-  # TODO: code goes here.
+  return(sensitivity * p_dis + p_pos_given_nodis * (1 - p_dis))
 }
 ```
 
@@ -320,7 +336,7 @@ As a sanity check, you can verify that when `p_dis=1e-6`, `sensitivity=1-1e-5` a
 ```{r}
 ## TODO: uncomment for a sanity check.
 ## This should return something like 1.9999e-6.
-# pr_positive_test( 1e-6, 1-1e-5, 1e-6 )
+pr_positive_test( 1e-6, 1-1e-5, 1e-6 )
 ```
 
 ### b) Disease screening
@@ -328,9 +344,10 @@ As a sanity check, you can verify that when `p_dis=1e-6`, `sensitivity=1-1e-5` a
 Write a function `pr_disease_given_pos` that takes the same three arguments as `pr_positive_test` above, and returns $\Pr[ \text{ disease } \mid \text{ positive test } ]$.
 
 ```{r}
-pr_disease_given_pos <- function() {
+pr_disease_given_pos <- function(p_dis, sensitivity, p_pos_given_nodis) {
   # TODO: don't forget to fill in the function arguments
   # TODO: code goes here.
+  return (sensitivity * p_dis / pr_positive_test(p_dis, sensitivity, p_pos_given_nodis))
 }
 ```
 
@@ -355,8 +372,12 @@ As usual, use your best judgement in selecting this sequence-- so long as you do
 If in doubt, explain your plotting decisions in a comment.
 
 ```{r}
-
-# TODO: plotting code goes here.
+pr_dis <- 10**( seq(-8,-1, by=0.05) )
+disease_give_pos <- rep(0, length(pr_dis))
+for (i in 1: length(pr_dis)){
+  disease_give_pos[i] <- pr_disease_given_pos(pr_dis[i], 0.9999, 1/10e3)
+}
+plot(pr_dis, disease_give_pos)
 ```
 
 ### d) Estimating sensitivity and specificity
@@ -398,6 +419,14 @@ Later in your studies (including later in this course!), you'll learn about how 
 Still, here once again is an example of the kinds of concerns we should always bear in mind when conducting our analyses.
 
 ```{r}
+prDisease <- 0.03
+prPositiveTest <- 158 / 4049
+prDiseaseGivenPos <- 116 / 158
+prPositiveGivenDis <- prDiseaseGivenPos * prPositiveTest / prDisease
 
-# TODO: if you need to do computations, you can put them here.
+prDisease
+prPositiveTest
+prDiseaseGivenPos
+prPositiveGivenDis
+
 ```
