@@ -1,7 +1,7 @@
 
 ---
 title: "STAT340 HW07: Estimation II"
-author: "TODO:name"
+author: Jeffrey Hui
 date: "October 2022"
 output: html_document
 ---
@@ -46,9 +46,8 @@ Your function should return a vector of length `nsamp`, whose entries are drawn 
 
 ```{r}
 generate_data <- function( nsamp, lambda=1 ) {
-  # TODO: write code here.
+  return (rpois(nsamp, lambda))
 }
-
 ```
 
 ### Part b: fitting the data
@@ -60,14 +59,11 @@ __Hint:__ the Poisson has the convenient property that the expectation and varia
 
 ```{r}
 estimate_pois_mean <- function( data ) {
-  # TODO: code goes here. Estimate lambda as the sample mean.
+  return (mean(data))
 }
 
 estimate_pois_var <- function( data ) {
-  # TODO: code goes here. Estimate the variance.
-
-  # One option is to be lazy and use the fact that mean=var=lambda in Poisson
-  # Like this: return( estimate_pois_mean( data ) );
+  return( estimate_pois_mean( data ))
 }
 
 ```
@@ -89,17 +85,21 @@ CLT_CI <- function( data, alpha=0.05) {
   # TODO: code here.
   
   # Step 1. use data to get Xbar and the variance estimate.
+  xbar <- estimate_pois_mean(data)
+  varbar <- estimate_pois_var(data)
+  n <- length(data)
   
   # Step 2. Use the estimated variance and choice of alpha to construct
   # a two-sided confidence interval for lambda
   # (sorry, Z-scores are going to show up here, but only briefly!)
+  quant <- qnorm(1 - alpha / 2)
   
   # Return the CI. Be careful-- depending on how you got your CI, it
   # might not be a simple vector (e.g., it might have a header).
   # Feel free to use the lecture code for reference.
+  return (c(xbar - quant * varbar / sqrt(n), xbar + quant * varbar / sqrt(n)))
   
 }
-
 ```
 
 ### Part d: simulation-based confidence intervals
@@ -112,12 +112,16 @@ You may pick the number of Monte Carlo iterates (i.e., replicates) as you wish, 
 
 ```{r}
 simulation_CI <- function( data, alpha=0.05) {
-  # TODO: code goes here.
- 
-  
-  # Return a vector c(L, U) with L the left end and U the right ("upper") end of the CI. 
-}
+  lambdahat <- estimate_pois_mean(data)
+  n_sim <- 1e3
+  lambda_stars <- rep(0, n_sim)
+  for (i in 1:n_sim) {
+    lambda_stars[i] <- mean(rpois(100, lambda = lambdahat))
+  }
 
+  # Return a vector c(L, U) with L the left end and U the right ("upper") end of the CI.
+  return (c(quantile(lambda_stars, alpha / 2)[[1]], quantile(lambda_stars, 1 - alpha / 2)[[1]]))
+}
 
 ```
 
@@ -132,8 +136,7 @@ Write a function `contained` that takes a CI (i.e., a two-vector with first entr
 
 ```{r}
 contained <- function( myCI, trueparam ) {
-  # TODO: code goes here.
-  # Hint: the estimation lecture notes include code to do this.
+  return (myCI[1] < trueparam & trueparam < myCI[2])
 }
 
 ```
@@ -160,11 +163,12 @@ estimate_coverage <- function( CI_fn, NMC, nsamp, lambdatrue=1, alpha=0.05 ) {
   for (i in 1:NMC ) {
     # Generate data: nsamp draws from Poisson( lambdatrue )
     data <- rpois(n=nsamp, lambda=lambdatrue);
-
     # Construct a confidence interval from it using the given CI function
-
+    interval <- CI_fn(data, alpha)
     # if lambdatrue is in the CI, increment coverages.
-
+    if (contained(interval, lambdatrue)) {
+      coverages <- coverages + 1
+    }
   }
   
   return( coverages/NMC )
@@ -188,9 +192,18 @@ An important point that we alluded to above is that in the Poisson, the mean and
 This is actually part of why you may have noticed some weird behavior in your experiments above.
 Unfortunately, a thorough explanation of that weird behavior will have to wait for your later theory courses.
 
+```{r}
+nmc <- 100
+nsamp <- 400
+l <- 1
+al <- .05
+estimate_coverage(CLT_CI, nmc, nsamp, lambdatrue = l, alpha = al)
+estimate_coverage(simulation_CI, nmc, nsamp, lambdatrue = l, alpha = al)
+```
+
 ***
 
-TODO: observations go here.
+I observed that the simulation method's coverage is affected by the parameter `nsamp`, whereas the CLT method is fairly stable with its coverage (around 0.95 for alpha = 0.05) no matter how I change the `nsamp` parameter. The simulation coverage will tend to go up with larger `nsamp` and vice versa.
 
 ***
 
@@ -222,7 +235,8 @@ There are no strictly right or wrong answers, here, though there are certainly b
 ```{r}
 #TODO: estimate the rate parameter.
 
-lambdahat <- NA; # TODO: write code; store your estimate in lambdahat.
+lambdahat <- mean(mule_kicks$deaths); # TODO: write code; store your estimate in lambdahat.
+lambdahat
 ```
 
 ### Part b: constructing a CI
@@ -232,13 +246,23 @@ Explain in reasonable detail what you are doing and why you are constructing the
 
 ```{r}
 
-#TODO: code goes here.
+simulate <- function( lambdahat, alpha=0.05) {
+  n_sim <- 2e4
+  lambda_stars <- rep(0, n_sim)
+  for (i in 1:n_sim) {
+    lambda_stars[i] <- mean(rpois(1000, lambda = lambdahat))
+  }
 
+  # Return a vector c(L, U) with L the left end and U the right ("upper") end of the CI.
+  return (c(quantile(lambda_stars, alpha / 2)[[1]], quantile(lambda_stars, 1 - alpha / 2)[[1]]))
+}
+
+simulate(lambdahat, alpha = 0.05)
 ```
 
 ***
 
-TODO: Discussion/explanation goes here.
+First I estimate the lambda by taking the mean of the data. Then I constructed the confidence interval by fixing my lambda estimate and simulating the confidence interval. For each iteration I computed the point estimate for the generated data, and I looked at the quantiles at the end based on the alpha value.
 
 ***
 
@@ -254,7 +278,7 @@ Explain and defend your decisions and thought processes in a reasonable way and 
 
 ***
 
-TODO: Code, plots and/or explanation go here.
+I do not think that it is a reasonable assumption. Although the Poisson distribution is good for modeling the flow in a unit of time, the time span in this example is over 20 years, which increases the factors that might affect this model. For example, the rate might not be constant throughout 20 years and would lead to significant change in the estimation.
 
 ***
 
