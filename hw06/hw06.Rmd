@@ -1,7 +1,7 @@
 
 ---
 title: "STAT340 HW06: Estimation"
-author: "TODO:name"
+author: Jeffrey
 date: "October 2022"
 output: html_document
 ---
@@ -48,12 +48,22 @@ Indeed, you are free to try doing something else entirely, if you wish.
 Just explain clearly what you are doing and why!
 
 ```{r}
-#TODO: code goes here.
+p <- 0.82
+NMC <- 1e4
+batch <- 12
+success <- rep(0, batch)
+for (j in 1:batch) {
+  success[j] <- sum(rbinom(NMC, j, p) >= 5)
+}
+success <- success / NMC
+success[10]
+plot(seq(1:batch), success, xlab = "Batch Size", ylab = "Prob. of Success")
+abline(h = 0.99, col='red')
 ```
 
 ***
 
-TODO: Explanation/description goes here.
+I used the Monte Carlo method and generated different batch size to experiment. For each batch size, I repeat for 10000 times and count how many of them are functional and normalize the result. The result is the probability that a certain batch size have at least 5 functional widgets, which turns out that a batch size of 10 is over 0.99.
 
 ***
 
@@ -87,13 +97,13 @@ There is no need to do any statistics here-- just look at the data and describe 
 
 ```{r}
 
-#TODO: plotting code goes here.
+plot(hp, mpg)
 
 ```
 
 ***
 
-TODO: explanation goes here. A sentence or two is plenty.
+Looking at the graph, I think that hp and mpg are correlated. With more horsepower comes less mpg, and with more mpg comes with less horsepower.
 
 ***
 
@@ -115,13 +125,31 @@ In this case, the "right" test statistic is clearly... (you'll have to decide, b
 
 ```{r}
 
-#TODO: code goes here.
+permute <- function (x, y) {
+  pool <- c(x, y)
+  nx <- length(x)
+  ny <- length(y)
+  nt <- nx + ny
+  shuf <- sample(pool, size=nt, replace = FALSE)
+  shufx <- shuf[1:nx]
+  shufy <- shuf[(nx + 1): nt]
+  return (cor(shufx, shufy))
+}
 
+NMC <- 1e4
+ts <- rep(0, NMC)
+for (i in 1:NMC) {
+  ts[i] <- permute(hp, mpg)
+}
+
+hist(ts, xlim = -0.8:0.8, xlab = "Correlation")
+abline(v = cor(hp, mpg), col='red')
+sum(ts <= -0.77)
 ```
 
 ***
 
-TODO: description/explanation of your thinking and conclusions go here.
+The doing a correlation test, I found that the probability that the null hypothesis is at least as rare as my observed data is 0, which means the p-value is 0. Also, by looking at the graph, we can see that the observed correlation is extremely rare to occur under the null hypothesis. Thus, we reject the null hypothesis.
 
 ***
 
@@ -173,10 +201,9 @@ Implement a function `sigma2hat` that takes a vector and returns the estimate $\
 ```{r}
 sigma2hat <- function( data ) {
   muhat <- mean(data);
-
-  # TODO: finish the function. you should return a single number that stores your estimate of sigma^2.
+  mse <- (data - muhat)^2
+  return (sum(mse) / length(data))
 }
-
 ```
 
 ### Part b: assessing our estimator
@@ -214,9 +241,10 @@ run_trial <- function( nsamp ) {
   data <- rnorm( nsamp ); # recall, mean=0,sd=1 is the default.
 
   # TODO: write code to apply our estimator to the data
-
+  var_mu <- sigma2hat(data)
 
   # TODO: return the difference between our estimate and the truth.
+  return (var_mu - 1)
   # The expectation of this quantity should be the bias, as defined above.
 
 
@@ -238,14 +266,11 @@ estimate_bias <- function( nsamp, NMC ) {
   # nsamp is the sample size for use in run_trial above.
   # NMC is the number of Monte Carlo replicates to use.
 
-  # TODO: code goes here.
-  # Hint: 
-  # create a vector in which to store the MC replicates.
-  # Then try a for loop with NMC iterations.
-  # in each iteration, call run_trial, and store the resulting
-  # difference in your vector.
-  # Then return the average of that vector.
-
+  res <- rep(0, NMC)
+  for (i in 1:NMC) {
+    res[i] <- run_trial(nsamp)
+  }
+  return (sum(res) / length(res))
   # Feel free to refer to the code from our Monte Carlo lectures for referece.
 
 }
@@ -256,8 +281,7 @@ Use your code to estimate the bias of our estimator $\hat{\sigma}^2$ using a sam
 __Hint:__ you should find that the bias is approximately $-1/n$, where $n$ is the sample size. Of course, owing to the randomness in your experiments, this will not be exact.
 
 ```{r}
-
-#TODO: write code here.
+estimate_bias(20, 2000)
 ```
 
 ### Part d: correcting bias
@@ -293,21 +317,27 @@ Repeat the above Monte Carlo experiment to estimate the bias of this new estimat
 # An easy approach is to define
 sigma2hat_adjusted <- function( data ) {
   # TODO: code goes here; analogous to sigma2hat above.
+  n <- length(data)
+  return (n / (n - 1) * sigma2hat(data))
 }
 
 run_trial_adjusted <- function( nsamp ) {
   # nsamp is the sample size, n in the math displays above.
-
-  # TODO: code goes here; analogous to run_trial above.
+  data <- rnorm( nsamp )
+  var_mu <- sigma2hat_adjusted(data)
+  return (var_mu - 1)
 }
 
 estimate_bias_adjusted <- function( nsamp, NMC ) {
   # nsamp is the sample size for use in run_trial above.
   # NMC is the number of Monte Carlo replicates to use.
-
-  # TODO: code goes here, analogous to estimate_bias above.
+  res <- rep(0, NMC)
+  for (i in 1:NMC) {
+    res[i] <- run_trial_adjusted(nsamp)
+  }
+  return (sum(res) / nsamp)
 }
-
+estimate_bias_adjusted(500, 2000)
 ```
 
 #### Coda (no questions, just a short aside): t-statistics
