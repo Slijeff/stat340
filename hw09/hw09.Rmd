@@ -1,0 +1,244 @@
+
+---
+title: "STAT340 HW09: Prediction II, multiple regression"
+author: Jeffrey Hui
+date: "November 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ November 17, 2022 at 11:59pm.
+
+---
+
+This homework will review our discussion of multiple regression from this week's lectures.
+
+## 1) More regression with `mtcars`
+
+In lecture, we worked briefly with the `mtcars` data set.
+Let's get more regression practice by working with it some more.
+
+### a) background
+
+Run `?mtcars` in the console (please __do not__ add it to this `Rmd` file) and briefly read the help page.
+Specifically, take note of the following:
+
+1. What is the source of this data?
+2. What is this data set measuring (i.e., what was the response variable in the original study, at least based on the brief description in the R documentation)?
+3. What predictors are available and what do they mean?
+
+***
+
+1. The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).
+2. It was studying the fuel consumption.
+3. See below:
+cyl: Number of cylinders
+disp: Displacement (cu.in.)
+hp: Gross horsepower
+drat: Rear axle ratio
+wt: Weight (1000 lbs)
+qsec: 1/4 mile time
+vs: Engine (0 = V-shaped, 1 = straight)
+am: Transmission (0 = automatic, 1 = manual)
+gear: Number of forward gears
+carb: Number of carburetors
+
+***
+
+You may want to also run `head(mtcars, 10)` or `View(mtcars)` to inspect the data frame briefly before moving on.
+
+### b) Fitting a model
+
+Use `lm` to run a regression of `mpg` on a few predictors in the data frame (choose two or three that you think would make a good model-- don't use all ten; we'll talk about why in later lectures).
+Make sure to include `data = mtcars` as a keyword argument to `lm` so that R knows what data frame to use.
+
+```{r}
+lm.mtcars <- lm(mpg ~ 1 + cyl + hp + qsec, data = mtcars)
+plot(lm.mtcars, ask = F, which = 1:2)
+```
+
+Briefly inspect the residuals plot by running `plot(lm.mtcars,ask=F,which=1:2)`.
+What do you observe, and what does it mean?
+
+***
+
+From the first plot, I see that the residuals spread out evenly and the residuals are reasonably well-behaved, which means the variance of the errors does not depend on the predictors. From the second plot, I see that the standardized residuals are roughly normal with mean zero by roughly following the diagonal line.
+
+***
+
+### c) Interpreting the model
+
+View the summary of your model by uncommenting and running the code below.
+```{r}
+summary(lm.mtcars)
+```
+
+Pick one of your predictors and give an interpretation of the estimate and standard error for its coefficient.
+Be careful in your wording of the interpretation.
+
+***
+
+Take cyl for example, the estimate means that holding all other coefficients constant, a change in 1 cyl yields -2.2696 change in mpg. The standard error of the coefficient is an estimate of the standard deviation of the coefficient. It is telling us how much uncertainty there is with our coefficient.
+
+
+***
+
+Which coefficients are statistically significantly different from zero? How do you know?
+
+***
+
+All coefficients are statistically significantly different from zero by looking at the Pr(>|t|) column of the coefficients since all their p-values are less than 0.05.
+
+***
+
+### d) Interpreting residuals
+
+What is the Residual Standard Error (RSE) for this model? How many degrees of freedom does it have?
+
+***
+
+The RSE for this model is 3.003 on 28 degrees of freedom.
+
+***
+
+What is the value of $R^2$ for this model? (__Hint:__ look at the output of `summary`) Give an interpretation of this value.
+
+***
+
+The value is 0.7757, it measures the proportion of the variation in the responses that is explained by our model.
+
+***
+
+### e) Adjusted $R^2$
+
+Briefly read about the adjusted $R^2$ [here](https://www.statisticshowto.com/probability-and-statistics/statistics-definitions/adjusted-r2/).
+What is the adjusted $R^2$ of this model and how does this differ from the usual $R^2$ value? (__Hint:__ again, look at the output of `summary`).
+
+***
+
+The adjusted $R^2$ of this model is 0.7517. It is differed from the usual $R^2$ by correcting it based on the number of predictors. For the usual $R^2$ value, it always increases with more predictors added into the model, which inaccurately indicates our model is getting "better." The adjusted $R^2$ aims to eliminate this effect.
+
+***
+
+### f) CIs for coefficients
+
+Read the documentation for the `confint` function, and use it to generate $95\%$ confidence intervals for the coefficients of your model.
+Give an interpretation of these confidence intervals.
+
+```{r}
+confint(lm.mtcars)
+```
+
+***
+
+If I compute 100 95% confidence intervals, on average 95% intervals will contain the true, fixed parameter coefficient of the predictors. For example, if I compute 100 95% confidence intervals for the coefficient hp, on average 95% intervals will contain the true, fixed parameter hp.
+
+***
+
+## 2) the `cats` data set
+
+The `cats` data set, included in the `MASS` library, contains data recorded from 144 cats.
+Each row of the data set contains the body weight (`Bwt`, in kgs), heart weight (`Hwt`, in grams) and the sex (`Sex`, levels `'F'` and `'M'`) for one of the cats in the data set.
+
+__Part a: plotting the data__
+
+Create a scatter plot showing heart weight on the y-axis and body weight on the x-axis.
+Ignore the `Sex` variable in this plot.
+
+```{r}
+library(MASS)
+head(cats)
+```
+
+```{r}
+
+plot(cats$Bwt, cats$Hwt)
+
+```
+
+Briefly describe what you see. Is there a clear trend in the data?
+
+The data shows a clear trend between body weight and heart weight: more body weight relates to more heart weight.
+
+__Part b: fitting a linear model__
+
+Fit a linear regression model to predict cat heart weight from cat body weight (and using an intercept term, of course).
+
+```{r}
+
+lm.cats <- lm(Hwt ~ 1 + Bwt, data = cats)
+
+```
+
+Examine the coefficients of your fitted model.
+What is the coefficient for the `Bwt` variable?
+Interpret this coefficient-- a unit change in body weight yields how much change in heart weight?
+
+```{r}
+
+summary(lm.cats)
+
+```
+
+***
+
+The coefficient for Bwt is 4.0341, which means holding all other coefficient constant, a change in 1 body weight yields 4.0341 increase in heart weight.
+
+***
+
+__Part c: back to plotting__
+
+Create the same plot from Part a above, but this time color the points in the scatter plot according to the `Sex` variable.
+You may use either `ggplot2` or the built-in R plotting tools, though I would recommend the former, for this.
+
+You should see a clear pattern. Describe it. A sentence or two is fine here.
+
+```{r}
+library(ggplot2)
+ggplot(aes(x = Bwt, y = Hwt, color = Sex), data = cats) +
+        geom_point()
+
+```
+
+***
+
+By looking at the graph, I see that the male cats generally have higher body weights and heart weights, whereas female cats have lower body weights and heart weights.
+
+***
+
+__Part d: adding `Sex` and an interaction__
+
+From looking at the data, it should be clear that the `Sex` variable has explanatory power in predicting heart weight, but it is also very correlated with body weight.
+
+Fit a new linear regression model, still predicting heart weight, but this time including both body weight and sex as predictors *and* an interaction term between body weight and sex.
+Take note of how R assigns `Sex` a dummy encoding.
+
+```{r}
+
+lm.cats2 <- lm(Hwt ~ 1 + Bwt + Sex + Bwt:Sex, data = cats)
+summary(lm.cats2)
+
+```
+
+Examine the outputs of your model.
+In particular, note the coefficients of `Sex` and the interaction between `Bwt` and `Sex`.
+Are both of these coefficients statistically significantly different from zero?
+How do you interpret the interaction term?
+
+***
+Both of these coefficients are statistically significantly different from zero since both of their p-values are less than 0.05. The interaction term is to eliminate the interaction effect, where one predictor depends on another predictor. If the sex is male, then on average an increase in body weight is associated with an increase of 2.6364 + 1.6763 = 4.3127 grams of heart weight. If the sex is female, then on average an increase in body weight is associated with an increase of 2.6364 grams of heart weight.
+
+
+***
+

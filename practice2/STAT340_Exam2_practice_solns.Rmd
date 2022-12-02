@@ -1,0 +1,256 @@
+---
+title: "STAT340 Exam 2 Practice Problems"
+author: "Keith Levin"
+date: "Fall 2022"
+output: html_document
+---
+
+## Problem 1: Estimating the success parameter of a Bernoulli
+
+The following code downloads a CSV file called `binary.csv` and reads it into a data frame `data` with one column, `X`, which is a vector of binary observations (i.e., every entry is zero or one).
+```{r}
+
+download.file(destfile='binary.csv', url='https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2021/STAT340/Exam2/binary_data.csv')
+data <- read.csv('binary.csv' )
+head(data)
+```
+
+Let us suppose that these observations were drawn iid from a Bernoulli distribution with unknown success probability $p$, and we are interested in estimating $p$.
+
+__Part a__
+
+Use Monte Carlo to construct a 90% (__note:__ 90%, not 95%) confidence interval for the parameter $p$.
+
+```{r}
+NMC <- 1e4;
+mcreps <- rep(NA, NMC);
+
+phat <- mean(data$X);
+for( i in 1:NMC ) {
+  fakedata <- rbinom(n=nrow(data), size=1, prob=phat );
+  mcreps[i] <- mean(fakedata);
+}
+
+c( quantile( mcreps, 0.05), quantile( mcreps,0.95) );
+```
+
+__Part b__
+
+Now, use the same method to construct a 95% confidence interval for $p$.
+```{r}
+
+c( quantile( mcreps, 0.025), quantile( mcreps,0.975) );
+
+```
+
+Is this CI wider or narrower than the one in Part a?
+Is this what you would expect?
+Why or why not?
+
+***
+
+The higher-confidence CI is wider.
+This is expected-- higher confidence requires a wider range of value to encompass a larger total probability mass under the curve between our lower and upper limits.
+
+***
+
+__Part c__
+
+Now, using the same data, construct a 95% (__note:__ 95% now, like in part b, *not* 90%) CLT-based confidence interval for $p$.
+```{r}
+phat <- mean(data$X);
+varhat <- var(data$X);
+
+SEmean <- sqrt(varhat/nrow(data));
+c( phat - 1.96*SEmean, phat+1.96*SEmean)
+```
+
+__Part d__
+
+We said in lecture that in general, these two approaches should yield fairly similar results.
+Is that the case here?
+Compare the two confidence intervals (e.g., which one is narrower, if any).
+A sentence or two is fine.
+
+***
+
+Yes. Indeed, the two intervals are the same within about $0.01$.
+
+***
+
+## Problem 2: Testing the effectiveness of a drug
+
+A doctor is testing a new drug for treating disease X.
+The doctor assigns a group of 60 patients with disease X randomly to two different groups: treatment and control.
+The treatment group is given the experiment drug.
+The control group is given a placebo.
+A month later, the doctor records whether or not each person in the study still has disease X, and records the result as a 1 if the patient is still sick, and a 0 otherwise.
+
+The following code downloads the data from this (obviously fictional) experiment and stores it in a data frame `diseaseX`.
+Each row of this data frame corresponds to a patient in the study.
+The data frame has two columns: `Group` encodes whether each patient was assigned to the treatment (`T`) or control (`C`) group.
+`Disease` captures whether or not a patient had disease X at the end of the experiment (`1` for sick, `0` for cured).
+
+```{r}
+download.file(destfile='diseaseX.csv', url='https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2021/STAT340/Exam2/diseaseX_data.csv')
+diseaseX <- read.csv('diseaseX.csv' )
+head(diseaseX)
+```
+
+__Part a__
+
+Using everything you know, test the hypothesis that the doctor's experimental treatment has no effect on disease status at the 95% level under the assumption that the data are modeled as independent Bernoulli-distributed observations.
+
+```{r}
+head(diseaseX)
+```
+
+```{r}
+nC <- sum( diseaseX$Group=='C')
+nT <- sum( diseaseX$Group=='T')
+ntotal <- nC + nT;
+
+NMC <- 1e4;
+mcreps <- rep(NA, NMC);
+for( i in 1:NMC ) {
+  shuf <- sample( diseaseX$Disease )
+  ctlmean <- mean(shuf[1:nC]);
+  trtmean <- mean(shuf[(nC+1):ntotal]);
+  mcreps[i] <- ctlmean - trtmean;
+}
+
+c( quantile(mcreps, 0.025), quantile(mcreps, 0.975) )
+```
+
+```{r}
+
+diff_obsd <- mean(diseaseX[diseaseX$Group=='C',]$Disease) -mean(diseaseX[diseaseX$Group=='T',]$Disease);
+
+diff_obsd
+```
+
+Our observed test statistic is outside the $95\%$ CI, indicating that we should reject the null that the treatment has no effect at the level $\alpha=0.05$.
+
+__Part b__
+
+Suppose that we model the patients in the control group as being diseased with probability $p_C$ and, similarly, a treatment patient is diseased with probability $p_T$.
+That is, we model the `Disease` entries in the data frame `diseaseX` above as being independent Bernoullis with success probability $p_C$ for the control patients and $p_T$ for the treatment patients.
+
+Let's define the *strength* $\delta$ of the treatment to be the difference between these two different probabilities:
+$$
+\delta = p_T - p_C.
+$$
+Using everything you know, construct a 95% confidence interval for $\delta$.
+
+__Hint:__ we recommend using simulation-based inference (of course, a CLT-based CI is also possible, if you prefer): what would you do if you had access to a machine that generated more data for you? Estimate $p_T$ and $p_C$, pretend they are the truth, and do whatever it is you would do if you had that machine.
+
+```{r}
+phatC <- mean(diseaseX[diseaseX$Group=='C',]$Disease);
+phatT <- mean(diseaseX[diseaseX$Group=='T',]$Disease);
+
+simulate_once <- function() {
+  fakectl <- rbinom(n=nC, size=1, prob=phatC);
+  faketrt <- rbinom(n=nT, size=1, prob=phatT);
+  return( mean(faketrt) - mean(fakectl) );
+}
+
+NMC <- 1e4;
+mcreps <- rep(NA, NMC);
+for( i in 1:NMC ) {
+  mcreps[i] <- simulate_once()
+}
+
+hist(mcreps)
+```
+
+```{r}
+
+c( quantile(mcreps, 0.025), quantile(mcreps, 0.975) )
+
+```
+
+__Note:__ the sign of $\delta$ is opposite that of the quantity we were working with in the earlier parts of this solution.
+This is to illustrate that so long as you are consistent within the code designed to answer a particular statistical question, your conclusions will not be appreciably changed (other than switching signs, of course).
+
+## Problem 3: Constructing a confidence interval
+
+Load the `cats` data, which includes sex (`Sex`, coded as `M` or `F`), body weight (`Bwt`, in kilograms) and heart weight (`Hwt`, in grams).
+
+```{r}
+library(MASS)
+head(cats)
+```
+
+Consider the ratio $R$ formed by dividing cat cat's heart weight by the body weight, and let $\rho$ denote the population mean of this quantity.
+
+### Part a) Constructing a CLT-based CI
+
+Using the `cats` data set, construct a CLT-based $95\%$ confidence interval for the mean heart weight to body weight ratio $\rho$.
+
+```{r}
+R <- cats$Hwt/cats$Bwt;
+
+varhat <- var(R);
+muhat <- mean(R);
+ncat <- nrow(cats)
+
+c(muhat - 1.96*sqrt(varhat/ncat), muhat + 1.96*sqrt(varhat/ncat) )
+```
+
+What is the lower limit of this CI? The upper limit?
+
+***
+
+TODO: answer goes here if it isn't obvious from the code.
+
+***
+
+### Part b) Constructing a simulation-based CI
+
+Under the assumption that $R$ is normally distributed about its mean $\rho$ with an unknown variance $\sigma^2$, use the `cats` data set to construct a simulation-based $95\%$ confidence interval for the mean heart weight to body weight ratio $\rho$.
+Your simulation should use at least 10,000 Monte Carlo iterates.
+
+__Hint:__ use the data to estimate $\sigma^2$, then proceed with the simulation-based CLT "recipe" that we used in lecture and discussion section.
+
+```{r}
+sigma2hat <- var( R )
+muhat <- mean(R)
+
+NMC <- 1e4
+replicates <- rep(NA, NMC);
+
+for(i in 1:NMC) {
+  fakedata <- rnorm(n=ncat, mean=muhat, sd=sqrt(sigma2hat));
+  replicates[i] <- mean(fakedata)
+}
+
+hist(replicates)
+```
+
+```{r}
+c( quantile(replicates, 0.025), quantile(replicates,0.975)  )
+```
+
+## Problem 4: Conditional Probability
+
+In the `mtcars` data set, there are two columns corresponding to the engine shape (`vs`; coded as $0$ for V-shape cylinder configuation, $1$ for "straight" cylinder configuration) and the transmission type (`am`; coded as $0$ for automatic and $1$ for manual).
+
+Assuming that the rows of the `mtcars` data set are an independent sample from a population (a questionable assumption, but let's suspend our disbelief for now), estimate the following probabilities:
+
+1. The probability that a random car is a manual with a V-shaped engine.
+
+```{r}
+sum(mtcars$am==1 & mtcars$vs==0)/nrow(mtcars)
+```
+
+2. The probability that a random car has a V-shaped engine *given* that it is a manual transmission
+
+```{r}
+sum(mtcars$am==1 & mtcars$vs==0)/sum(mtcars$am==1)
+```
+
+3. The probability that a random car has a manual transmission *given* that it has a V-shaped engine.
+
+```{r}
+sum(mtcars$am==1 & mtcars$vs==0)/sum(mtcars$vs==0)
+```
