@@ -1,0 +1,313 @@
+
+---
+title: "STAT340 HW11: Model selection"
+author: Jeffrey Hui
+date: "December 2022"
+output: html_document
+---
+
+***
+
+TODO: If you worked with any other students on this homework, please list their names and NetIDs here.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ December 8, 2022 at 11:59pm.
+
+---
+
+This homework will review our discussion of model selection from this week's lectures.
+
+## Problem 1: Selecting a model order with CV
+
+Previously this semester, we explored the problem of predicting stopping distance based on the speed of a cart.
+
+```{r}
+data(cars)
+head(cars)
+```
+
+Reminder: there are two columns in the `cars` data set: `speed` and `distance`.
+See `?cars` for details on the units that these are measured in, though that detail isn't important for this exercise.
+
+In exploring this data, we noticed that including a quadratic term in our model improved our model fit.
+There were obvious physical reasons why this should be the case: kinetic energy grows as the square of the velocity, so the stopping distance should increase quadratically with speed.
+
+Now, let's check that idea another way.
+
+### Part a) Comparing single-variable models
+
+Let's start by fitting three different models:
+
+1. one that predicts stopping distance as a linear function of speed (plus an intercept term)
+2. one that predicts stopping distance as the square of speed (plus an intercept term)
+3. one that predicts stopping distance as the cube of speed (plus an intercept term)
+
+```{r}
+# TODO: uncomment and complete the code below.
+
+linear_model <- lm(dist ~ 1 + speed, data=cars)
+quad_model <- lm(dist ~ 1 + I(speed ^ 2), data=cars)
+cube_model <- lm(dist ~ 1 + I(speed ^ 3), data=cars)
+```
+
+Compare the RSS of these three models.
+Which is best?
+
+```{r}
+deviance(linear_model)
+deviance(quad_model)
+deviance(cube_model)
+```
+
+***
+
+The quad model is the best.
+
+***
+
+### Part b) LOOCV
+
+Now, take the two best models from Part (a), and fit a new model that predicts stopping distance from *both* of the variables from these two best models.
+So, for example, if the quadratic and cubic models had the two best fits, then fit a model that predicts stopping distance from squared speed and cubed speed (and an intercept term).
+
+```{r}
+b_model <- lm(dist ~ 1 + speed + I(speed ^ 2), data = cars)
+```
+
+Compare this model's fit to those of the two single-variable models.
+Is it better?
+Is this surprising to you, in light of our discussion of model fitting and cross-validation?
+Why or why not?
+
+```{r}
+deviance(b_model)
+```
+
+***
+
+The new model is better than both of the two single-variable models. It is not surprising since we know that adding more predictors will generally decrease the RSS.
+
+***
+
+### Part c) cross-validation
+
+Implement leave-one-out cross validation to compare these three models (i.e., the two best single-variable models and the "combined" model).
+You are free to modify the demo code used in lecture, though I highly recommend implementing it from scratch-- the best way to make sure you understand a procedure or algorithm is to implement it yourself!
+
+Which model is best, at least according to LOOCV?
+Is this surprising?
+
+```{r}
+
+nrows <- nrow(cars)
+errors <- data.frame('Row' = rep(1:nrows, each=3), 'Model' = c(1,2,3), 'Error' = rep(NA, nrows * 3))
+
+for (i in 1:nrows) {
+   train_data <- cars[-c(i),]
+   leftout <- cars[c(i),]
+
+   # fit linear
+   m1 <- lm(dist ~ 1 + speed, data=train_data)
+   m1.pred <- predict(m1, leftout)
+   errors[(errors$Row == i & errors$Model == 1), ]$Error <- (m1.pred - leftout$dist) ^ 2
+
+   # fit quad
+   m2 <- lm(dist ~ 1 + I(speed^2), data=train_data)
+   m2.pred <- predict(m2, leftout)
+   errors[(errors$Row == i & errors$Model == 2), ]$Error <- (m2.pred - leftout$dist) ^ 2
+
+   # fit combine
+   m3 <- lm(dist ~ 1 + speed + I(speed^2), data=train_data)
+   m3.pred <- predict(m3, leftout)
+   errors[(errors$Row == i & errors$Model == 3), ]$Error <- (m3.pred - leftout$dist) ^ 2
+}
+
+err_agg <- aggregate(Error ~ Model, data = errors, FUN = mean)
+head(err_agg)
+```
+
+***
+
+According to LOOCV, the quad model is the best. (ADD MORE STUFF)
+
+***
+
+## Problem 2: Spurious variables and overfitting
+
+In lecture, we discussed how adding more variables to a model will always improve the fit (as measured by residual sum of squares), even when this improvement in RSS is really just an indication of over-fitting.
+Let's explore that phenomenon a bit here by simulating data in which certain variables are known to be informative, and others are known to be useless for prediction, and then see what happens when we do or don't include those "useless" variables.
+
+Our "recipe" for generating data will be as follows:
+
+1. Choose a number of observations $n$ and a number of predictors $p$.
+2. Generate $n$ independent vectors of $p$ predictors each (i.e., $X_1,X_2,\dots,X_n \in \mathbb{R}^p$), whose entries are drawn independently from a standard normal.
+3. Choose a number of "predictive" coefficients $k$, with $0 \le k \le p$, and generate a random vector of true coefficients whose first $k$ entries are $-1$ or $1$, independently, and whose remaining $p-k$ entries are $0$. Thus, the first $k$ predictors have predictive power, because their corresponding coefficients are not zero, while the remaining $n-k$ predictors have no predictive power.
+4. Generate responses $Y_1,Y_2,\dots,Y_n$ for each of the $n$ observations by generating $Y_i \sim \operatorname{Normal( \sum_{j=1}^p \beta_j X_{i,j}, 1)}$.
+
+The first few parts of this problem will walk you through implementing this recipe. Then, the last part of the problem will have you explore how adding the non-informative features to a model still improves model fit (on the training data, anyway).
+
+### Part a) Generating predictors
+
+Write a function called `generate_X` that takes two arguments: a number of observations `n` and a number of features `p`.
+`generate_X(n, p)` should return a data frame with `n` rows and `p` columns, whose entries are drawn independently and identically from a normal with mean $0$ and variance $1$.
+Each of the `n` rows of this data frame will correspond to a data point, and each of the `p` columns will correspond to a different predictor.
+You may name the columns however you see fit (including accepting the R defaults that result from creating a new data frame), except you __may not__ name any columns `Y`, because we're going to use that name in Part (c) below!
+You may assume that `n` and `p` are positive integers, so there is no need for error checking.
+
+__Hint:__ a simple way to generate this data frame (but certainly not the only way) is to first generate an array of `n*p` standard normal random variables, use the `matrix` function to reshape it into a matrix of `n` rows and `p` columns, and then convert that matrix to a data frame using `data.frame`. 
+
+```{r}
+generate_X <- function( n, p ) {
+   data <- rnorm(n*p, mean = 0, sd = 1)
+   mat <- matrix(data = data, nrow = n, ncol = p)
+   return (data.frame(mat))
+}
+```
+
+### Part b) Generating coefficients
+
+Write a function `generate_coefs` that takes two integer arguments `p` and `k`, in which `k` is at least `0` and at most `p`, and returns a vector $\beta$ of length `p` generated in the following way:
+
+1. For $1 \le i \le k$, $\beta_i=1$ with probability $1/2$ and $\beta_i = -1$ with probability $1/2$.
+2. For $k < i \le p$, $\beta_i = 0$.
+
+This random vector will play the role of our vector of true coefficients in our experiments to follow.
+You may assume that `p` is a positive integer and `k` is a non-negative integer at most equal to `p`, so there is no need to perform any error checking. 
+
+__Note:__ pay special attention to what should happen when $k=0$.
+
+__Hint:__ an easy way to choose between $-1$ and $1$ with equal probability is to use `sample( c(-1,1), replace=TRUE)` and set the `size` parameter as needed.
+
+```{r}
+generate_coefs <- function( p, k ) {
+  if (k == 0) {
+     return (rep(0, p))
+  } else {
+     return (c(sample(c(-1, 1), replace = TRUE, size = k), rep(0, p - k)))
+  }
+}
+```
+
+### Part c) Generating responses
+
+This one's a freebie. The following code takes a data frame `X` with $n$ rows and $p$ columns, a length-$p$ array of predictors `beta` and generates a vector of $n$ responses $Y$, generated according the standard linear regression model with error variance $\sigma^2 = 1$.
+The function then returns an "expanded" version of the data frame `X`, in which this vector of responses has been added as a new column, with column name `Y`.
+
+```{r}
+generate_responses <- function( X, beta ) {
+   Xmx <- as.matrix(X)
+   EY <- Xmx %*% beta
+   Y <- rnorm( n=nrow(EY), mean=EY, sd=1);
+   X$Y <- Y;
+   return(X)
+}
+```
+
+Again, this problem is a freebie. You don't have to do anything; the code is written for you!
+
+### Part d) RSS and adding predictors
+
+Use the code written in the previous three parts to generate a data frame `X` consisting of $n=200$ observations on $p=10$ predictor columns and an additional column `Y` of responses.
+The first three predictor columns should be "predictive" (in particular, each either $-1$ or $1$, generated randomly according to our scheme from Part (b)), and the remaining seven of which are zero.
+
+Fit a series of models to this data, predicting the column `Y` using an intercept term and
+
+1. only the first predictor,
+2. only the first two predictors,
+3. only the first three predictors,
+4. only the first four predictors,
+5. ...
+etc., for ten models in total.
+
+For each of these ten models, compute its residual sum of squares (RSS), and store them in a length-ten vector.
+
+__Hint:__ you are welcome to perform all of the above model fitting "by hand" (i.e., writing ten very similar chunks of code), but I would recommend finding a way to consolidate this all into a single for-loop, in which you create a vector of RSSs, one for each model.
+I recommend this both because it's good coding practice (both in the sense of practicing a skill and in the sense of being the "right" thing to do).
+If you decide to do this, you may find it useful to know that the formula `Y ~ .` means to fit a model that predicts `Y` from all the other columns in a data frame.
+
+__Note:__ you might have noticed that our data generation process doesn't include an intercept! Don't worry about this; it makes the problem a bit more interesting. We "know" that in our true model, the intercept coefficient is zero, but we don't know that in practice!
+
+```{r}
+#TODO: code goes here.
+
+# Hint: if you want to do this with a for-loop, here's some skeleton
+# code to get you started.
+# If you want to do this a different way, feel free to delete this code.
+
+#TODO: write a chunk of code to generate the data, as described above.
+gen_data <- generate_X(200, 10)
+gen_data <- generate_responses(gen_data, generate_coefs(10, 3))
+
+# Here's a vector in which to store our RSSs
+model_rss <- rep(NA, 10); # One entry for each of the ten models.
+for( i in 1:10 ) {
+  
+  # TODO: write code to select only the first i columns of the data frame
+  # and the last column of the data frame
+  # and store them in a new data frame.
+  # Note that the last column, our column of responses,
+  # is guaranteed to be named `Y`,
+  # thanks to our generate_responses() function,
+   temp_frame <- data.frame(gen_data[, 1:i])
+   temp_frame$Y <- gen_data$Y
+
+  # TODO: write code to fit a model to this "subsetted" data frame.
+   mdl <- lm(Y ~ ., data = temp_frame)
+  
+  # TODO: compute the fitted model's RSS; store it in the i-th entry of model_rss,
+  # So, you need to replace NA with something more useful.
+  model_rss[i] <- deviance(mdl)
+}
+```
+
+### Part e) Plotting RSS
+
+Using the RSSs computed in Part (d), plot the RSS as a function of the number of predictors in our model.
+What do you notice?
+
+In particular, you should notice that for the first few predictors, RSS decreases fast, then levels out.
+When does this leveling out start?
+Does this make sense?
+Discuss briefly.
+
+__Note:__ you may use either `ggplot2` or the built-in R plotting tools to create your plot.
+
+```{r}
+plot(model_rss)
+```
+
+***
+
+I notice that the RSS is very high for the first few models, then starts to decrease rapidly. The leveling out starts at the third model. This make sense since we know that the number of coefficient that has "predictive" power remains the same after the third model.
+
+***
+
+### Part f) the LASSO
+
+Ideally, we would want to fit a model using only the "predictive" predictors in our data generation process from the previous few parts.
+Of course, in practice, we don't know ahead of time which variables are predictive.
+Figuring out which variables are predictive is the whole point of variable selection!
+
+Following our code from discussion section, apply the LASSO to the data from Part (d). Try a few different values of the regularization parameter $\lambda$, or just let `glmnet` consider them automatically.
+For (approximately!) what value(s), if any, of the regularization parameter $\lambda$ does the LASSO select *only* the three "predictive" coefficients?
+If not, what variables does the LASSO select?
+Discuss briefly.
+
+```{r}
+library(glmnet)
+lasso_mdl <- glmnet(gen_data[, 1:10], gen_data$Y, alpha = 1, lambda = c(0,1,2))
+coef(lasso_mdl)
+```
+
+***
+
+Approximately, when the regularization parameter is 1, the LASSO select only the three "predictive" coefficients. For other values of the parameter such as 0 and 2, the LASSO selects either too few or all of the predictors.
+
+***
